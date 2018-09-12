@@ -1,0 +1,6 @@
+cache/
+.idea/
+.pytest_cache/
+*.ipynb_checkpoints/
+__pycache__/
+db.sqlite3
