@@ -16,7 +16,7 @@ def nearby_trailheads(request):
     List all code snippets, or create a new snippet.
     """
     request = NearbyTrailheadRequest(data=request.data)
-    if request.is_valid():
-        geocode =
+    # if request.is_valid():
+    #     geocode =
 
 
