@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict
 from functools import reduce
-from typing import NamedTuple, List, Set, Iterator
+from typing import NamedTuple, List, Set, Iterator, Dict
 
 import geopy.distance
 import srtm
@@ -15,8 +15,6 @@ class Node(NamedTuple):
     lat: float
     lon: float
 
-    def to_dict(self):
-        return dict(id=self.id, lat=self.lat, lon=self.lon)
 
 
 elevation = srtm.get_data()
@@ -99,10 +97,16 @@ class Trail:
         gmap.plot(lats, lons, color, edge_width=5)
 
 
+class Trailhead(NamedTuple):
+    node: Node
+    name: str
+
+
 class TrailNetwork:
-    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Set[int]):
+    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]):
         self.graph = subgraph
-        self.trailheads: List[Node] = [node for node in subgraph.nodes if node.id in nontrail_nodeset]
+        self.trailheads: List[Trailhead] = [Trailhead(node, nontrail_nodeset[node.id]) for node in subgraph.nodes if
+                                            node.id in nontrail_nodeset]
 
     @memoize
     def total_length_km(self):
@@ -121,7 +125,6 @@ class TrailNetwork:
     def __hash__(self):
         return self.unique_id().__hash__()
 
-
     """
     def bounding_box(self):
         top_left = None
@@ -133,7 +136,6 @@ class TrailNetwork:
                 if bottom_right is None:
                     bottom_right = node
     """
-
 
     @memoize
     def trail_names(self):
@@ -173,6 +175,7 @@ class TrailNetwork:
             active_paths = final_paths
         return complete_paths
 
+
 class Subpath:
 
     @classmethod
@@ -192,15 +195,6 @@ class Subpath:
             self.trail_segments.append(trail_segment.reverse())
 
         return self.is_complete()
-
-    def to_dict(self):
-        return dict(
-            starting_location=self.start_node.to_dict(),
-            length=self.length_km(),
-            elevation_gain=self.elevation_change().gain,
-            trails=[trail.way_id for trail in self.trail_segments],
-            nodes=[n.to_dict() for n in self.nodes()]
-        )
 
     def nodes(self):
         for seg in self.trail_segments:
@@ -244,4 +238,3 @@ class InverseGraph:
         self.trails[trail.id] = trail
         for node in trail.nodes:
             self.node_trail_map[node.id].append(trail.id)
-

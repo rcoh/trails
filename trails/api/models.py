@@ -1,3 +1,5 @@
+from typing import NamedTuple
+
 from django.core.validators import validate_comma_separated_integer_list
 from django.db import models
 
@@ -7,6 +9,9 @@ import osm.model
 
 # from osm.model import Subpath, TrailNetwork
 
+class Point(NamedTuple):
+    lat: float
+    lng: float
 
 class TrailNetwork(models.Model):
     name = models.CharField(max_length=30)
@@ -32,17 +37,18 @@ class TrailNetwork(models.Model):
 
 class Node(models.Model):
     lat = models.FloatField()
-    lon = models.FloatField()
+    lng = models.FloatField()
     osm_id = models.PositiveIntegerField(primary_key=True)
 
     @classmethod
     def from_osm_node(cls, osm_node=osm.model.Node):
-        return cls(lat=osm_node.lat, lon=osm_node.lon, osm_id=osm_node.id)
+        return cls(lat=osm_node.lat, lng=osm_node.lon, osm_id=osm_node.id)
 
 
 class Trailhead(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
     node = models.OneToOneField(Node, on_delete=models.CASCADE, unique=True)
+    name = models.CharField(max_length=32)
 
 class Route(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)

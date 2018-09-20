@@ -1,16 +1,14 @@
+import random
 from multiprocessing.pool import Pool
+from pathlib import Path
+from typing import List, Dict, NamedTuple, Iterator, Optional
 
 import collections
-import random
-from tqdm import tqdm
-from pathlib import Path
-from typing import List, Set, Dict, NamedTuple, Iterator, Tuple, Optional
-
 import networkx as nx
-
-from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Node
 import osmium as o
+from tqdm import tqdm
 
+from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead
 from osm.util import verify_identical_nodes
 
 TRAIL = {'path', 'footway', 'track', 'trail', 'pedestrian', 'steps'}
@@ -32,7 +30,7 @@ class OsmiumTrailLoader(o.SimpleHandler):
     def __init__(self):
         super(OsmiumTrailLoader, self).__init__()
         self.trails: Dict[int, Trail] = {}
-        self.non_trail_nodes: Set[int] = set()
+        self.non_trail_nodes: Dict[int, str] = {}
 
     def way(self, w):
         if 'highway' in w.tags:
@@ -44,7 +42,7 @@ class OsmiumTrailLoader(o.SimpleHandler):
                     # where nodes of ways near the boundary are missing.
                     print("WARNING: way %d incomplete. Ignoring." % w.id)
             if drivable(w):
-                node_ids = [n.ref for n in w.nodes]
+                node_ids = {n.ref: w.tags.get('name', 'No name') for n in w.nodes}
                 self.non_trail_nodes.update(node_ids)
 
 
@@ -59,7 +57,7 @@ class OsmLoadResult(NamedTuple):
 def proc_trailhead(args):
     trailhead, network_map, settings = args
     network = network_map[trailhead]
-    new_loops = list(find_loops_from_root(network, trailhead, max_distance_km=settings.max_distance_km,
+    new_loops = list(find_loops_from_root(network, trailhead.node, max_distance_km=settings.max_distance_km,
                                           max_concurrent=settings.max_concurrent, max_segments=settings.max_segments))
     for loop in new_loops:
         loop.elevation_change()
@@ -81,7 +79,7 @@ class OSMIngestor:
             ingest_settings = DefaultIngestSettings
         self.ingest_settings = ingest_settings
         self.trails: Dict[int, Trail] = {}
-        self.non_trail_nodes = set()
+        self.non_trail_nodes = {}
         self.global_graph = nx.Graph()
         self.loops: Dict[TrailNetwork, List[Subpath]] = collections.defaultdict(list)
 
@@ -130,14 +128,14 @@ class OSMIngestor:
             if network.total_length_km() > 5:
                 yield network
 
-    def trailead_network_map(self) -> Dict[Node, TrailNetwork]:
+    def trailead_network_map(self) -> Dict[Trailhead, TrailNetwork]:
         res = {}
         for network in self.trail_networks():
             for trailhead in network.trailheads:
                 res[trailhead] = network
         return res
 
-    def trailheads(self) -> Iterator[Node]:
+    def trailheads(self) -> Iterator[Trailhead]:
         for network in self.trail_networks():
             for trailhead in network.trailheads:
                 yield trailhead

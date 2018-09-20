@@ -37,7 +37,7 @@ def test_trail_network(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / 'huddart.osm')
     networks = list(ingestor.trail_networks())
-    assert len(networks) == 10
+    assert len(networks) == 1
     matching = [network for network in networks if 'Miramontes Trail' in network.trail_names()]
     assert len(matching) == 1
     huddart = matching[0]
@@ -47,12 +47,12 @@ def test_trail_network(test_data, huddart_trails):
     # Node in the center of the park on a service road
     for trailhead in huddart.trailheads:
         print('marking', trailhead)
-        gmap.marker(trailhead.lat, trailhead.lon, title=trailhead.id)
+        gmap.marker(trailhead.node.lat, trailhead.node.lon, title=trailhead.node.id)
 
     for trail in huddart.trail_segments():
         trail.draw(gmap)
     gmap.draw('out.html')
-    trailhead_ids = [trailhead.id for trailhead in huddart.trailheads]
+    trailhead_ids = [trailhead.node.id for trailhead in huddart.trailheads]
 
     # On a "service" road that is accessible [access=permissive]
     assert 534963194 in trailhead_ids

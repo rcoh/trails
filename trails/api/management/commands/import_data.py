@@ -32,11 +32,11 @@ def import_data(file: str):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         tn.save()
         for trailhead_osm in trail_network_osm.trailheads:
-            n = Node.from_osm_node(trailhead_osm)
+            n = Node.from_osm_node(trailhead_osm.node)
             n.save()
-            trailhead = Trailhead(trail_network=tn, node=n)
+            trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)
             trailhead.save()
-            trailheads[trailhead_osm.id] = trailhead
+            trailheads[trailhead_osm.node.id] = trailhead
 
         for loop in loops:
             trailhead = trailheads[loop.start_node.id]
