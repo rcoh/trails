@@ -123,7 +123,7 @@ class Trailhead(NamedTuple):
 
 
 class TrailNetwork:
-    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]):
+    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]) -> None:
         self.graph = subgraph
         self.trailheads: List[Trailhead] = [
             Trailhead(node, nontrail_nodeset[node.id])
@@ -171,40 +171,12 @@ class TrailNetwork:
         for edge in self.graph.edges:
             yield self.graph[edge[0]][edge[1]]["trail"]
 
-    def find_loops(
-        self, trailhead: Node, max_segments=50, max_distance_km=55, max_concurrent=100
-    ):
-        random.seed(735)
-        complete_paths = []
-        active_paths = [Subpath.from_startnode(trailhead)]
-        while active_paths:
-            filtered_paths = []
-            for path in active_paths:
-                if (
-                    path.length_km() < max_distance_km
-                    and len(path.trail_segments) < max_segments
-                ):
-                    filtered_paths.append(path)
-            active_paths = filtered_paths
-            final_paths = []
-            random.shuffle(active_paths)
-            active_paths = active_paths[:max_concurrent]
-            for path in active_paths:
-                options = list(dict(self.graph[path.last_node()]).items())
-                random.shuffle(options)
-                for next_node, next_trail in options:
-                    if next_trail["trail"].id == path.trail_segments[-1].id:
-                        continue
-                    new_path = path.fork()
-                    is_loop = new_path.add_node(next_trail["trail"])
-                    if is_loop:
-                        yield new_path
-                    final_paths.append(new_path)
-            active_paths = final_paths
-        return complete_paths
-
-
 class Subpath:
+
+    def __init__(self, segments: List[Trail]) -> None:
+        self.start_node = segments[0].nodes[0]
+        self.trail_segments = segments
+
     @classmethod
     def from_startnode(cls, starting_node: Node):
         trail_segments = [
@@ -213,10 +185,6 @@ class Subpath:
             )
         ]
         return cls(trail_segments)
-
-    def __init__(self, segments: List[Trail]):
-        self.start_node = segments[0].nodes[0]
-        self.trail_segments = segments
 
     def add_node(self, trail_segment: Trail):
         current_final = self.last_node()

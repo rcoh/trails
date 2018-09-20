@@ -1,14 +1,14 @@
 import random
 from multiprocessing.pool import Pool
 from pathlib import Path
-from typing import List, Dict, NamedTuple, Iterator, Optional
+from typing import List, Dict, NamedTuple, Iterator, Optional, Set
 
 import collections
 import networkx as nx
 import osmium as o
 from tqdm import tqdm
 
-from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead
+from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node
 from osm.util import verify_identical_nodes
 
 TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
@@ -83,12 +83,12 @@ DefaultIngestSettings = IngestSettings(
 
 
 class OSMIngestor:
-    def __init__(self, ingest_settings: Optional[IngestSettings] = None):
+    def __init__(self, ingest_settings: Optional[IngestSettings] = None) -> None:
         if ingest_settings is None:
             ingest_settings = DefaultIngestSettings
         self.ingest_settings = ingest_settings
         self.trails: Dict[int, Trail] = {}
-        self.non_trail_nodes = {}
+        self.non_trail_nodes: Dict[int, str] = {}
         self.global_graph = nx.Graph()
         self.loops: Dict[TrailNetwork, List[Subpath]] = collections.defaultdict(list)
 
@@ -120,7 +120,7 @@ class OSMIngestor:
 
     def result(self) -> OsmLoadResult:
         tn: List[TrailNetwork] = list(self.trail_networks())
-        nodes = set()
+        nodes: Set[Node] = set()
         for trail in self.trails.values():
             nodes.update(trail.nodes)
 
@@ -167,7 +167,7 @@ def segment_trails(trails: List[Trail]):
     for trail in trails:
         graph.add_trail(trail)
 
-    flat_trails = []
+    flat_trails: List[Trail] = []
     for trail in trails:
         split_idxs = []
         for (i, node) in enumerate(trail.nodes[1:-1], 1):
@@ -190,7 +190,7 @@ def find_loops_from_root(
     max_concurrent=1000,
 ):
     random.seed(735)
-    complete_paths = []
+    complete_paths: List[Subpath] = []
     subgraph = trail_network.graph
     active_paths = [Subpath.from_startnode(root)]
     while active_paths:
