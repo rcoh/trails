@@ -10,57 +10,105 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Node',
+            name="Node",
             fields=[
-                ('lat', models.FloatField()),
-                ('lon', models.FloatField()),
-                ('osm_id', models.PositiveIntegerField(primary_key=True, serialize=False)),
+                ("lat", models.FloatField()),
+                ("lon", models.FloatField()),
+                (
+                    "osm_id",
+                    models.PositiveIntegerField(primary_key=True, serialize=False),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Route',
+            name="Route",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('length_km', models.FloatField()),
-                ('elevation_gain', models.FloatField()),
-                ('elevation_loss', models.FloatField()),
-                ('is_loop', models.BooleanField()),
-                ('nodes', models.TextField(validators=[django.core.validators.RegexValidator(re.compile('^\\d+(?:\\,\\d+)*\\Z'), code='invalid', message='Enter only digits separated by commas.')])),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("length_km", models.FloatField()),
+                ("elevation_gain", models.FloatField()),
+                ("elevation_loss", models.FloatField()),
+                ("is_loop", models.BooleanField()),
+                (
+                    "nodes",
+                    models.TextField(
+                        validators=[
+                            django.core.validators.RegexValidator(
+                                re.compile("^\\d+(?:\\,\\d+)*\\Z"),
+                                code="invalid",
+                                message="Enter only digits separated by commas.",
+                            )
+                        ]
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Trailhead',
+            name="Trailhead",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('node', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Node')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "node",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.Node"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TrailNetwork',
+            name="TrailNetwork",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=30)),
-                ('trail_length_km', models.FloatField()),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=30)),
+                ("trail_length_km", models.FloatField()),
             ],
         ),
         migrations.AddField(
-            model_name='trailhead',
-            name='trail_network',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.TrailNetwork'),
+            model_name="trailhead",
+            name="trail_network",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.TrailNetwork"
+            ),
         ),
         migrations.AddField(
-            model_name='route',
-            name='trail_network',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.TrailNetwork'),
+            model_name="route",
+            name="trail_network",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.TrailNetwork"
+            ),
         ),
         migrations.AddField(
-            model_name='route',
-            name='trailhead',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Trailhead'),
+            model_name="route",
+            name="trailhead",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.Trailhead"
+            ),
         ),
     ]

@@ -11,18 +11,18 @@ from tqdm import tqdm
 from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead
 from osm.util import verify_identical_nodes
 
-TRAIL = {'path', 'footway', 'track', 'trail', 'pedestrian', 'steps'}
-INACCESSIBLE = {'service'}
+TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
+INACCESSIBLE = {"service"}
 
 
 def is_trail(way):
-    return way.tags['highway'] in TRAIL
+    return way.tags["highway"] in TRAIL
 
 
 def drivable(way):
     # TODO: learn these features / rules engine?
-    no_cars = way.tags.get('motor_vehicle') in ['no']
-    accessible = way.tags.get('access') in ['yes', 'permissive', None]
+    no_cars = way.tags.get("motor_vehicle") in ["no"]
+    accessible = way.tags.get("access") in ["yes", "permissive", None]
     return not is_trail(way) and accessible and not no_cars
 
 
@@ -33,7 +33,7 @@ class OsmiumTrailLoader(o.SimpleHandler):
         self.non_trail_nodes: Dict[int, str] = {}
 
     def way(self, w):
-        if 'highway' in w.tags:
+        if "highway" in w.tags:
             if is_trail(w):
                 try:
                     self.trails[w.id] = Trail.from_way(w)
@@ -42,7 +42,7 @@ class OsmiumTrailLoader(o.SimpleHandler):
                     # where nodes of ways near the boundary are missing.
                     print("WARNING: way %d incomplete. Ignoring." % w.id)
             if drivable(w):
-                node_ids = {n.ref: w.tags.get('name', 'No name') for n in w.nodes}
+                node_ids = {n.ref: w.tags.get("name", "No name") for n in w.nodes}
                 self.non_trail_nodes.update(node_ids)
 
 
@@ -57,8 +57,15 @@ class OsmLoadResult(NamedTuple):
 def proc_trailhead(args):
     trailhead, network_map, settings = args
     network = network_map[trailhead]
-    new_loops = list(find_loops_from_root(network, trailhead.node, max_distance_km=settings.max_distance_km,
-                                          max_concurrent=settings.max_concurrent, max_segments=settings.max_segments))
+    new_loops = list(
+        find_loops_from_root(
+            network,
+            trailhead.node,
+            max_distance_km=settings.max_distance_km,
+            max_concurrent=settings.max_concurrent,
+            max_segments=settings.max_segments,
+        )
+    )
     for loop in new_loops:
         loop.elevation_change()
     return (network, new_loops)
@@ -70,7 +77,9 @@ class IngestSettings(NamedTuple):
     max_segments: int
 
 
-DefaultIngestSettings = IngestSettings(max_concurrent=1000, max_distance_km=50, max_segments=50)
+DefaultIngestSettings = IngestSettings(
+    max_concurrent=1000, max_distance_km=50, max_segments=50
+)
 
 
 class OSMIngestor:
@@ -98,10 +107,15 @@ class OSMIngestor:
 
         p = Pool(parallelism)
 
-        trailheads_to_process = [(trailhead, network_map, self.ingest_settings) for trailhead in new_trailheads]
+        trailheads_to_process = [
+            (trailhead, network_map, self.ingest_settings)
+            for trailhead in new_trailheads
+        ]
 
-        for (network, loops) in tqdm(p.imap_unordered(proc_trailhead, trailheads_to_process),
-                                     total=len(trailheads_to_process)):
+        for (network, loops) in tqdm(
+            p.imap_unordered(proc_trailhead, trailheads_to_process),
+            total=len(trailheads_to_process),
+        ):
             self.loops[network] += loops
 
     def result(self) -> OsmLoadResult:
@@ -118,7 +132,13 @@ class OSMIngestor:
         for trail in segmented_trails:
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
-            G.add_edge(trail.nodes[0], trail.nodes[-1], weight=trail.length().km, name=trail.name, trail=trail)
+            G.add_edge(
+                trail.nodes[0],
+                trail.nodes[-1],
+                weight=trail.length().km,
+                name=trail.name,
+                trail=trail,
+            )
 
     def trail_networks(self):
         G = self.global_graph
@@ -162,7 +182,13 @@ def segment_trails(trails: List[Trail]):
     return flat_trails
 
 
-def find_loops_from_root(trail_network: TrailNetwork, root, max_segments=20, max_distance_km=10, max_concurrent=1000):
+def find_loops_from_root(
+    trail_network: TrailNetwork,
+    root,
+    max_segments=20,
+    max_distance_km=10,
+    max_concurrent=1000,
+):
     random.seed(735)
     complete_paths = []
     subgraph = trail_network.graph
@@ -170,7 +196,10 @@ def find_loops_from_root(trail_network: TrailNetwork, root, max_segments=20, max
     while active_paths:
         filtered_paths = []
         for path in active_paths:
-            if path.length_km() < max_distance_km and len(path.trail_segments) < max_segments:
+            if (
+                path.length_km() < max_distance_km
+                and len(path.trail_segments) < max_segments
+            ):
                 filtered_paths.append(path)
         active_paths = filtered_paths
         final_paths = []
@@ -180,10 +209,10 @@ def find_loops_from_root(trail_network: TrailNetwork, root, max_segments=20, max
             options = list(dict(subgraph[path.last_node()]).items())
             random.shuffle(options)
             for next_node, next_trail in options:
-                if next_trail['trail'].id == path.trail_segments[-1].id:
+                if next_trail["trail"].id == path.trail_segments[-1].id:
                     continue
                 new_path = path.fork()
-                is_loop = new_path.add_node(next_trail['trail'])
+                is_loop = new_path.add_node(next_trail["trail"])
                 if is_loop:
                     yield new_path
                 final_paths.append(new_path)

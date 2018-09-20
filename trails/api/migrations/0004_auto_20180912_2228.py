@@ -6,14 +6,14 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0003_trailnetwork_unique_id'),
-    ]
+    dependencies = [("api", "0003_trailnetwork_unique_id")]
 
     operations = [
         migrations.AlterField(
-            model_name='trailhead',
-            name='node',
-            field=models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='api.Node'),
-        ),
+            model_name="trailhead",
+            name="node",
+            field=models.OneToOneField(
+                on_delete=django.db.models.deletion.CASCADE, to="api.Node"
+            ),
+        )
     ]

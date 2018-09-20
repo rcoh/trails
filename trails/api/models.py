@@ -9,9 +9,11 @@ import osm.model
 
 # from osm.model import Subpath, TrailNetwork
 
+
 class Point(NamedTuple):
     lat: float
     lng: float
+
 
 class TrailNetwork(models.Model):
     name = models.CharField(max_length=30)
@@ -21,7 +23,11 @@ class TrailNetwork(models.Model):
 
     @classmethod
     def from_osm_trail_network(cls, osm_network: osm.model.TrailNetwork):
-        return cls(name='Unknown', trail_length_km=osm_network.total_length_km(), unique_id=osm_network.unique_id()[:100])
+        return cls(
+            name="Unknown",
+            trail_length_km=osm_network.total_length_km(),
+            unique_id=osm_network.unique_id()[:100],
+        )
 
     # def matches(self, other_network):
     #     ourways = set(self.way_ids.split(','))
@@ -32,7 +38,6 @@ class TrailNetwork(models.Model):
     #         return True
     # coordinates JSON serialized
     # coords = models.TextField()
-
 
 
 class Node(models.Model):
@@ -50,6 +55,7 @@ class Trailhead(models.Model):
     node = models.OneToOneField(Node, on_delete=models.CASCADE, unique=True)
     name = models.CharField(max_length=32)
 
+
 class Route(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
     length_km = models.FloatField()
@@ -60,8 +66,20 @@ class Route(models.Model):
     trailhead = models.ForeignKey(Trailhead, on_delete=models.CASCADE)
 
     @classmethod
-    def from_subpath(cls, subpath: osm.model.Subpath, trail_network: TrailNetwork, trailhead: Trailhead):
+    def from_subpath(
+        cls,
+        subpath: osm.model.Subpath,
+        trail_network: TrailNetwork,
+        trailhead: Trailhead,
+    ):
         elev = subpath.elevation_change()
-        node_rep = ','.join([str(n.id) for n in subpath.nodes()])
-        return cls(trail_network=trail_network, length_km=subpath.length_km(), elevation_gain=elev.gain,
-                   elevation_loss=elev.loss, is_loop=subpath.is_complete(), nodes=node_rep, trailhead=trailhead)
+        node_rep = ",".join([str(n.id) for n in subpath.nodes()])
+        return cls(
+            trail_network=trail_network,
+            length_km=subpath.length_km(),
+            elevation_gain=elev.gain,
+            elevation_loss=elev.loss,
+            is_loop=subpath.is_complete(),
+            nodes=node_rep,
+            trailhead=trailhead,
+        )

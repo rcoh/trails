@@ -16,7 +16,6 @@ class Node(NamedTuple):
     lon: float
 
 
-
 elevation = srtm.get_data()
 
 
@@ -48,7 +47,10 @@ class Trail:
 
     @memoize
     def length(self):
-        dists = [geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon)) for (a, b) in window(self.nodes)]
+        dists = [
+            geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon))
+            for (a, b) in window(self.nodes)
+        ]
         return reduce(lambda x, y: x + y, dists)
 
     @classmethod
@@ -59,26 +61,39 @@ class Trail:
             n = Node(node.ref, node.lat, node.lon)
             nodes.append(n)
 
-        if way.tags.get('name'):
-            name = way.tags['name']
+        if way.tags.get("name"):
+            name = way.tags["name"]
         else:
-            name = 'unamed'
+            name = "unamed"
         return cls(nodes=nodes, way_id=id, name=name)
 
     def split_at(self, idxs):
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx:idx + 1]
-            new_id = f'{self.way_id}-{seg_num}/{len(idxs)}'
-            result.append(Trail(nodes=new_nodes, way_id=self.way_id, derived_id=new_id, name=self.name))
+            new_nodes = self.nodes[start_idx : idx + 1]
+            new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
+            result.append(
+                Trail(
+                    nodes=new_nodes,
+                    way_id=self.way_id,
+                    derived_id=new_id,
+                    name=self.name,
+                )
+            )
             start_idx = idx
 
         final_nodes = self.nodes[start_idx:]
         if not final_nodes:
-            assert 'Unexpected empty final nodes'
-        result.append(Trail(nodes=final_nodes, way_id=self.way_id, derived_id=f'{self.way_id}-{len(idxs)}/{len(idxs)}',
-                            name=self.name))
+            assert "Unexpected empty final nodes"
+        result.append(
+            Trail(
+                nodes=final_nodes,
+                way_id=self.way_id,
+                derived_id=f"{self.way_id}-{len(idxs)}/{len(idxs)}",
+                name=self.name,
+            )
+        )
         verify_identical_nodes([self], result)
         return result
 
@@ -88,7 +103,12 @@ class Trail:
 
     @memoize
     def reverse(self):
-        return Trail(nodes=list(reversed(self.nodes)), way_id=self.way_id, derived_id=f'{self.id}-rev', name=self.name)
+        return Trail(
+            nodes=list(reversed(self.nodes)),
+            way_id=self.way_id,
+            derived_id=f"{self.id}-rev",
+            name=self.name,
+        )
 
     def draw(self, gmap, color=None):
         lats = [n.lat for n in self.nodes]
@@ -105,19 +125,22 @@ class Trailhead(NamedTuple):
 class TrailNetwork:
     def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]):
         self.graph = subgraph
-        self.trailheads: List[Trailhead] = [Trailhead(node, nontrail_nodeset[node.id]) for node in subgraph.nodes if
-                                            node.id in nontrail_nodeset]
+        self.trailheads: List[Trailhead] = [
+            Trailhead(node, nontrail_nodeset[node.id])
+            for node in subgraph.nodes
+            if node.id in nontrail_nodeset
+        ]
 
     @memoize
     def total_length_km(self):
         total_length = 0
         for edge in self.graph.edges:
-            total_length += self.graph[edge[0]][edge[1]]['weight']
+            total_length += self.graph[edge[0]][edge[1]]["weight"]
         return total_length
 
     def unique_id(self):
         way_ids = {trail.way_id for trail in self.trail_segments()}
-        return ','.join(sorted(way_ids))
+        return ",".join(sorted(way_ids))
 
     def __eq__(self, other):
         return isinstance(other, TrailNetwork) and self.unique_id() == other.unique_id()
@@ -141,21 +164,26 @@ class TrailNetwork:
     def trail_names(self):
         names = set()
         for edge in self.graph.edges:
-            names.add(self.graph[edge[0]][edge[1]]['name'])
+            names.add(self.graph[edge[0]][edge[1]]["name"])
         return names
 
     def trail_segments(self) -> Iterator[Trail]:
         for edge in self.graph.edges:
-            yield self.graph[edge[0]][edge[1]]['trail']
+            yield self.graph[edge[0]][edge[1]]["trail"]
 
-    def find_loops(self, trailhead: Node, max_segments=50, max_distance_km=55, max_concurrent=100):
+    def find_loops(
+        self, trailhead: Node, max_segments=50, max_distance_km=55, max_concurrent=100
+    ):
         random.seed(735)
         complete_paths = []
         active_paths = [Subpath.from_startnode(trailhead)]
         while active_paths:
             filtered_paths = []
             for path in active_paths:
-                if path.length_km() < max_distance_km and len(path.trail_segments) < max_segments:
+                if (
+                    path.length_km() < max_distance_km
+                    and len(path.trail_segments) < max_segments
+                ):
                     filtered_paths.append(path)
             active_paths = filtered_paths
             final_paths = []
@@ -165,10 +193,10 @@ class TrailNetwork:
                 options = list(dict(self.graph[path.last_node()]).items())
                 random.shuffle(options)
                 for next_node, next_trail in options:
-                    if next_trail['trail'].id == path.trail_segments[-1].id:
+                    if next_trail["trail"].id == path.trail_segments[-1].id:
                         continue
                     new_path = path.fork()
-                    is_loop = new_path.add_node(next_trail['trail'])
+                    is_loop = new_path.add_node(next_trail["trail"])
                     if is_loop:
                         yield new_path
                     final_paths.append(new_path)
@@ -177,10 +205,13 @@ class TrailNetwork:
 
 
 class Subpath:
-
     @classmethod
     def from_startnode(cls, starting_node: Node):
-        trail_segments = [Trail(way_id='fakeroot', name='fakeroot', nodes=[starting_node, starting_node])]
+        trail_segments = [
+            Trail(
+                way_id="fakeroot", name="fakeroot", nodes=[starting_node, starting_node]
+            )
+        ]
         return cls(trail_segments)
 
     def __init__(self, segments: List[Trail]):
@@ -221,7 +252,7 @@ class Subpath:
     def __repr__(self):
         names = [seg.name for seg in self.trail_segments]
         if self.is_complete():
-            names.append('fakeroot')
+            names.append("fakeroot")
         return f'{self.length_km()}: {"<->".join(names)}'
 
     def draw(self, gmap):

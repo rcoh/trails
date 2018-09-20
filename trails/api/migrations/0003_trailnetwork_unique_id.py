@@ -5,15 +5,13 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0002_auto_20180912_2222'),
-    ]
+    dependencies = [("api", "0002_auto_20180912_2222")]
 
     operations = [
         migrations.AddField(
-            model_name='trailnetwork',
-            name='unique_id',
-            field=models.CharField(default='', max_length=100, unique=True),
+            model_name="trailnetwork",
+            name="unique_id",
+            field=models.CharField(default="", max_length=100, unique=True),
             preserve_default=False,
-        ),
+        )
     ]

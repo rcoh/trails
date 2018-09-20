@@ -5,14 +5,8 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0005_trailhead_name'),
-    ]
+    dependencies = [("api", "0005_trailhead_name")]
 
     operations = [
-        migrations.RenameField(
-            model_name='node',
-            old_name='lon',
-            new_name='lng',
-        ),
+        migrations.RenameField(model_name="node", old_name="lon", new_name="lng")
     ]

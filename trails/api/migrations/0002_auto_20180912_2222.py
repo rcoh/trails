@@ -6,14 +6,14 @@ import django.db.models.deletion
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0001_initial'),
-    ]
+    dependencies = [("api", "0001_initial")]
 
     operations = [
         migrations.AlterField(
-            model_name='trailhead',
-            name='node',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Node', unique=True),
-        ),
+            model_name="trailhead",
+            name="node",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.Node", unique=True
+            ),
+        )
     ]

@@ -10,8 +10,9 @@ from tqdm import tqdm
 
 Settings = IngestSettings(max_distance_km=50, max_segments=20, max_concurrent=50)
 
+
 @click.command()
-@click.argument('file', type=click.Path(exists=True))
+@click.argument("file", type=click.Path(exists=True))
 def import_data(file: str):
     start_time = time.time()
     path = Path(file)
@@ -19,7 +20,9 @@ def import_data(file: str):
     loader.ingest_file(path)
     result = loader.result()
     ingest_time = time.time()
-    click.secho(f'OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds')
+    click.secho(
+        f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"
+    )
 
     # Need to delete everything before import TODO
     Trailhead.objects.all().delete()
@@ -43,4 +46,6 @@ def import_data(file: str):
             Route.from_subpath(loop, tn, trailhead).save()
 
     end_time = time.time()
-    click.secho(f'{Route.objects.count()}/{TrailNetwork.objects.count()}/{Trailhead.objects.count()} objects imported in {(end_time-start_time)} seconds')
+    click.secho(
+        f"{Route.objects.count()}/{TrailNetwork.objects.count()}/{Trailhead.objects.count()} objects imported in {(end_time-start_time)} seconds"
+    )
