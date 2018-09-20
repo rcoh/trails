@@ -1,18 +1,9 @@
-from typing import NamedTuple
-
+from django.contrib.gis.geos import Point
 from django.core.validators import validate_comma_separated_integer_list
-from django.db import models
+from django.contrib.gis.db import models
 
 # Create your models here.
 import osm.model
-
-
-# from osm.model import Subpath, TrailNetwork
-
-
-class Point(NamedTuple):
-    lat: float
-    lng: float
 
 
 class TrailNetwork(models.Model):
@@ -41,19 +32,39 @@ class TrailNetwork(models.Model):
 
 
 class Node(models.Model):
-    lat = models.FloatField()
-    lng = models.FloatField()
+    point = models.PointField()
     osm_id = models.PositiveIntegerField(primary_key=True)
+
+    @property
+    def lat(self):
+        return self.point.x
+
+    @property
+    def lon(self):
+        return self.point.y
 
     @classmethod
     def from_osm_node(cls, osm_node=osm.model.Node):
-        return cls(lat=osm_node.lat, lng=osm_node.lon, osm_id=osm_node.id)
+        return cls(point=Point(osm_node.lat, osm_node.lon), osm_id=osm_node.id)
 
 
 class Trailhead(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
     node = models.OneToOneField(Node, on_delete=models.CASCADE, unique=True)
     name = models.CharField(max_length=32)
+
+    @staticmethod
+    def trailheads_near(pnt: Point, max_distance_km: float):
+        return Trailhead.objects.filter(node__point__distance_lte=(pnt, max_distance_km*1000))
+
+class TravelCache(models.Model):
+    start_point = models.PointField()
+
+class TravelTime(models.Model):
+    travel_time_minutes = models.FloatField()
+    osm_id = models.PositiveIntegerField()
+    start_point = models.ForeignKey(TravelCache, on_delete=models.CASCADE)
+
 
 
 class Route(models.Model):
@@ -67,10 +78,10 @@ class Route(models.Model):
 
     @classmethod
     def from_subpath(
-        cls,
-        subpath: osm.model.Subpath,
-        trail_network: TrailNetwork,
-        trailhead: Trailhead,
+            cls,
+            subpath: osm.model.Subpath,
+            trail_network: TrailNetwork,
+            trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         node_rep = ",".join([str(n.id) for n in subpath.nodes()])

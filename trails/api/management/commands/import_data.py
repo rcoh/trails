@@ -41,9 +41,11 @@ def import_data(file: str):
             trailhead.save()
             trailheads[trailhead_osm.node.id] = trailhead
 
+        routes = []
         for loop in loops:
             trailhead = trailheads[loop.start_node.id]
-            Route.from_subpath(loop, tn, trailhead).save()
+            routes.append(Route.from_subpath(loop, tn, trailhead))
+        Route.objects.bulk_create(routes)
 
     end_time = time.time()
     click.secho(

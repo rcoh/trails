@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from api.models import Route
+from api.models import Route, Trailhead
 
 
 class RouteSerializer(serializers.ModelSerializer):
@@ -13,4 +13,11 @@ class RouteSerializer(serializers.ModelSerializer):
             "elevation_gain",
             "elevation_loss",
             "is_loop",
+        )
+
+class TrailheadSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Trailhead
+        fields = (
+            "name",
         )
