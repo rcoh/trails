@@ -6,19 +6,20 @@ from typing import Dict
 import djclick as click
 
 from api.models import TrailNetwork, Route, Trailhead, Node
-from osm.loader import OSMIngestor, IngestSettings
+from osm.loader import OSMIngestor, IngestSettings, DefaultQualitySettings
 from tqdm import tqdm
 
-Settings = IngestSettings(max_distance_km=50, max_segments=50, max_concurrent=100)
+Settings = IngestSettings(max_distance_km=50, max_segments=50, max_concurrent=100, quality_settings=DefaultQualitySettings)
 
 
 @click.command()
+@click.option('--parallelism', '-p', type=click.INT)
 @click.argument("file", type=click.Path(exists=True))
-def import_data(file: str):
+def import_data(file: str, parallelism=multiprocessing.cpu_count()):
     start_time = time.time()
     path = Path(file)
     loader = OSMIngestor(Settings)
-    loader.ingest_file(path, parallelism=multiprocessing.cpu_count())
+    loader.ingest_file(path, parallelism=parallelism)
     result = loader.result()
     ingest_time = time.time()
     click.secho(
@@ -35,7 +36,7 @@ def import_data(file: str):
     for trail_network_osm, loops in tqdm(result.loops.items()):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         tn.save()
-        for trailhead_osm in trail_network_osm.trailheads:
+        for trailhead_osm in tqdm(trail_network_osm.trailheads, desc='Trailheads'):
             n = Node.from_osm_node(trailhead_osm.node)
             n.save()
             trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)

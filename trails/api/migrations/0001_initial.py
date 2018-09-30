@@ -9,74 +9,139 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = [
-    ]
+    dependencies = []
 
     operations = [
         migrations.CreateModel(
-            name='Node',
+            name="Node",
             fields=[
-                ('point', django.contrib.gis.db.models.fields.PointField(srid=4326)),
-                ('osm_id', models.PositiveIntegerField(primary_key=True, serialize=False)),
+                ("point", django.contrib.gis.db.models.fields.PointField(srid=4326)),
+                (
+                    "osm_id",
+                    models.PositiveIntegerField(primary_key=True, serialize=False),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Route',
+            name="Route",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('length_km', models.FloatField()),
-                ('elevation_gain', models.FloatField()),
-                ('elevation_loss', models.FloatField()),
-                ('is_loop', models.BooleanField()),
-                ('nodes', django.contrib.gis.db.models.fields.LineStringField(srid=4326)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("length_km", models.FloatField()),
+                ("elevation_gain", models.FloatField()),
+                ("elevation_loss", models.FloatField()),
+                ("is_loop", models.BooleanField()),
+                (
+                    "nodes",
+                    django.contrib.gis.db.models.fields.LineStringField(srid=4326),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='Trailhead',
+            name="Trailhead",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=32)),
-                ('node', models.OneToOneField(on_delete=django.db.models.deletion.CASCADE, to='api.Node')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=32)),
+                (
+                    "node",
+                    models.OneToOneField(
+                        on_delete=django.db.models.deletion.CASCADE, to="api.Node"
+                    ),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TrailNetwork',
+            name="TrailNetwork",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=30)),
-                ('trail_length_km', models.FloatField()),
-                ('unique_id', models.CharField(max_length=100, unique=True)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=30)),
+                ("trail_length_km", models.FloatField()),
+                ("unique_id", models.CharField(max_length=100, unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name='TravelCache',
+            name="TravelCache",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('start_point', django.contrib.gis.db.models.fields.PointField(srid=4326)),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                (
+                    "start_point",
+                    django.contrib.gis.db.models.fields.PointField(srid=4326),
+                ),
             ],
         ),
         migrations.CreateModel(
-            name='TravelTime',
+            name="TravelTime",
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('travel_time_minutes', models.FloatField()),
-                ('osm_id', models.PositiveIntegerField()),
-                ('start_point', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.TravelCache')),
+                (
+                    "id",
+                    models.AutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("travel_time_minutes", models.FloatField()),
+                ("osm_id", models.PositiveIntegerField()),
+                (
+                    "start_point",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        to="api.TravelCache",
+                    ),
+                ),
             ],
         ),
         migrations.AddField(
-            model_name='trailhead',
-            name='trail_network',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.TrailNetwork'),
+            model_name="trailhead",
+            name="trail_network",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.TrailNetwork"
+            ),
         ),
         migrations.AddField(
-            model_name='route',
-            name='trail_network',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.TrailNetwork'),
+            model_name="route",
+            name="trail_network",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.TrailNetwork"
+            ),
         ),
         migrations.AddField(
-            model_name='route',
-            name='trailhead',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.Trailhead'),
+            model_name="route",
+            name="trailhead",
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to="api.Trailhead"
+            ),
         ),
     ]

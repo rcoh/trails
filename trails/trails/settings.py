@@ -41,8 +41,8 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    'django.contrib.gis',
-    'corsheaders',
+    "django.contrib.gis",
+    "corsheaders",
     "rest_framework",
     "osm",
     "api",
@@ -56,7 +56,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "corsheaders.middleware.CorsMiddleware"
+    "corsheaders.middleware.CorsMiddleware",
 ]
 
 CORS_ORIGIN_ALLOW_ALL = True
@@ -84,7 +84,7 @@ WSGI_APPLICATION = "trails.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
-SPATIALITE_LIBRARY_PATH = 'mod_spatialite.so'
+SPATIALITE_LIBRARY_PATH = "mod_spatialite.so"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.spatialite",

@@ -1,5 +1,5 @@
 import random
-from collections import defaultdict
+from collections import defaultdict, Counter
 from functools import reduce
 from typing import NamedTuple, List, Set, Iterator, Dict
 
@@ -71,7 +71,7 @@ class Trail:
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx : idx + 1]
+            new_nodes = self.nodes[start_idx: idx + 1]
             new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
             result.append(
                 Trail(
@@ -171,11 +171,45 @@ class TrailNetwork:
         for edge in self.graph.edges:
             yield self.graph[edge[0]][edge[1]]["trail"]
 
-class Subpath:
+def filt_neg(d):
+    return {k:v for k,v in d.items() if v > 0}
 
+class Subpath:
     def __init__(self, segments: List[Trail]) -> None:
         self.start_node = segments[0].nodes[0]
         self.trail_segments = segments
+        self.segment_dist = Counter()
+        for s in self.trail_segments:
+            self.segment_dist.update({s.id: s.length().km})
+
+        assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
+
+    def similarity(self, other: 'Subpath'):
+        assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
+        unique_paths = Counter()
+        unique_paths += self.segment_dist
+        unique_paths.subtract(other.segment_dist)
+
+        unique_distance = sum([abs(v) for v in unique_paths.values()])
+
+        total_distance = self.length_km() + other.length_km()
+        return 1 - unique_distance / total_distance
+
+    @memoize
+    def quality(self, repeat_weight=1):
+        if self.length_km() == 0:
+            return 1
+        # repeat = unique_length / total_length
+        visited_trails = set()
+        unique_length = 0
+        total_length = 0
+        for trail in self.trail_segments:
+            if trail.id not in visited_trails:
+                unique_length += trail.length().m
+                visited_trails.add(trail.id)
+            total_length += trail.length().m
+        repeat_quality = unique_length / total_length
+        return repeat_quality * repeat_weight
 
     @classmethod
     def from_startnode(cls, starting_node: Node):
@@ -189,13 +223,13 @@ class Subpath:
     def add_node(self, trail_segment: Trail):
         current_final = self.last_node()
         if trail_segment.nodes[0] == current_final:
-            self.trail_segments.append(trail_segment)
+            new_segment = trail_segment
         else:
-            self.trail_segments.append(trail_segment.reverse())
+            new_segment = trail_segment.reverse()
 
-        return self.is_complete()
+        return Subpath(list(self.trail_segments) + [new_segment])
 
-    def nodes(self):
+    def nodes(self) -> Iterator[Node]:
         for seg in self.trail_segments:
             for node in seg.nodes:
                 yield node
@@ -203,15 +237,12 @@ class Subpath:
     def is_complete(self):
         return self.trail_segments[0].nodes[0] == self.last_node()
 
-    def fork(self):
-        return Subpath(list(self.trail_segments))
-
     @memoize
     def length_km(self):
         return sum([t.length().km for t in self.trail_segments])
 
     @memoize
-    def elevation_change(self):
+    def elevation_change(self) -> ElevationChange:
         return ElevationChange.from_nodes(self.nodes())
 
     def last_node(self):

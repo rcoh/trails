@@ -10,23 +10,39 @@ URL = "https://api.traveltimeapp.com/v4/time-filter"
 API_KEY = "826197ad401f526445650d96aaad63b0"
 APP_ID = "92be8391"
 
-def get_travel_times_cached(start_point: Point, target_locations: List[Trailhead], max_minutes=40) -> Dict[
-    Trailhead, int]:
-    cached_results = TravelCache.objects.filter(start_point__distance_lte=(start_point, 1000))
+
+def get_travel_times_cached(
+    start_point: Point, target_locations: List[Trailhead], max_minutes=40
+) -> Dict[Trailhead, int]:
+    cached_results = TravelCache.objects.filter(
+        start_point__distance_lte=(start_point, 1000)
+    )
     if cached_results:
         points = TravelTime.objects.filter(start_point=cached_results[0])
-        trailhead_map = {trailhead.node.osm_id: trailhead for trailhead in target_locations}
-        return {trailhead_map[point.osm_id]: point.travel_time_minutes for point in points}
+        trailhead_map = {
+            trailhead.node.osm_id: trailhead for trailhead in target_locations
+        }
+        return {
+            trailhead_map[point.osm_id]: point.travel_time_minutes for point in points
+        }
     else:
         results = get_travel_times(start_point, target_locations, max_minutes)
         cache_row = TravelCache(start_point=start_point)
         cache_row.save()
-        travel_time_objects = [TravelTime(travel_time_minutes=time, osm_id=trailhead.node.osm_id, start_point=cache_row) for trailhead, time in results.items()]
+        travel_time_objects = [
+            TravelTime(
+                travel_time_minutes=time,
+                osm_id=trailhead.node.osm_id,
+                start_point=cache_row,
+            )
+            for trailhead, time in results.items()
+        ]
         TravelTime.objects.bulk_create(travel_time_objects)
         return results
 
+
 def get_travel_times(
-        start_point: Point, target_locations: List[Trailhead], max_minutes=40
+    start_point: Point, target_locations: List[Trailhead], max_minutes=40
 ) -> Dict[Trailhead, int]:
     locations = [dict(id="__start", coords=dict(lat=start_point.x, lng=start_point.y))]
     for trailhead in target_locations:

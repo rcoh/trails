@@ -9,12 +9,15 @@ class RecursiveSerializer(serializers.Serializer):
         serializer = self.parent.parent.__class__(value, context=self.context)
         return serializer.data
 
+
 class NodeListSerializer(serializers.Serializer):
     def to_representation(self, instance):
-        return [{'lat': lat, 'lon': lon} for (lat, lon) in instance]
+        return [{"lat": lat, "lon": lon} for (lat, lon) in instance]
+
 
 class RouteSerializer(serializers.ModelSerializer):
     nodes = NodeListSerializer()
+
     class Meta:
         model = Route
         fields = (
@@ -24,24 +27,19 @@ class RouteSerializer(serializers.ModelSerializer):
             "elevation_gain",
             "elevation_loss",
             "is_loop",
-            "nodes"
+            "nodes",
         )
+
 
 class NodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Node
-        fields = (
-            "osm_id",
-            "lat",
-            "lon"
-        )
+        fields = ("osm_id", "lat", "lon")
+
 
 class TrailheadSerializer(serializers.ModelSerializer):
     node = NodeSerializer()
+
     class Meta:
         model = Trailhead
-        fields = (
-            "name",
-            "id",
-            "node"
-        )
+        fields = ("name", "id", "node")

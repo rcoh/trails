@@ -55,16 +55,19 @@ class Trailhead(models.Model):
 
     @staticmethod
     def trailheads_near(pnt: Point, max_distance_km: float):
-        return Trailhead.objects.filter(node__point__distance_lte=(pnt, max_distance_km*1000))
+        return Trailhead.objects.filter(
+            node__point__distance_lte=(pnt, max_distance_km * 1000)
+        )
+
 
 class TravelCache(models.Model):
     start_point = models.PointField()
+
 
 class TravelTime(models.Model):
     travel_time_minutes = models.FloatField()
     osm_id = models.PositiveIntegerField()
     start_point = models.ForeignKey(TravelCache, on_delete=models.CASCADE)
-
 
 
 class Route(models.Model):
@@ -75,13 +78,14 @@ class Route(models.Model):
     is_loop = models.BooleanField()
     nodes = models.LineStringField()
     trailhead = models.ForeignKey(Trailhead, on_delete=models.CASCADE)
+    quality = models.FloatField()
 
     @classmethod
     def from_subpath(
-            cls,
-            subpath: osm.model.Subpath,
-            trail_network: TrailNetwork,
-            trailhead: Trailhead,
+        cls,
+        subpath: osm.model.Subpath,
+        trail_network: TrailNetwork,
+        trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         return cls(
@@ -92,4 +96,5 @@ class Route(models.Model):
             is_loop=subpath.is_complete(),
             nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
             trailhead=trailhead,
+            quality=subpath.quality()
         )
