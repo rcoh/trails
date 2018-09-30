@@ -92,7 +92,7 @@ class OSMIngestor:
         self.global_graph = nx.Graph()
         self.loops: Dict[TrailNetwork, List[Subpath]] = collections.defaultdict(list)
 
-    def ingest_file(self, filename: Path, parallelism=8):
+    def ingest_file(self, filename: Path, parallelism=1):
         # TODO: figure out file bounds, delete data within those bounds
         before_trailheads = set(self.trailheads())
         osm_loader = OsmiumTrailLoader()

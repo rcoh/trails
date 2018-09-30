@@ -106,7 +106,7 @@ class Trail:
         return Trail(
             nodes=list(reversed(self.nodes)),
             way_id=self.way_id,
-            derived_id=f"{self.id}-rev",
+            derived_id=self.id,
             name=self.name,
         )
 

@@ -1,3 +1,4 @@
+import multiprocessing
 import time
 from pathlib import Path
 from typing import Dict
@@ -8,7 +9,7 @@ from api.models import TrailNetwork, Route, Trailhead, Node
 from osm.loader import OSMIngestor, IngestSettings
 from tqdm import tqdm
 
-Settings = IngestSettings(max_distance_km=50, max_segments=20, max_concurrent=50)
+Settings = IngestSettings(max_distance_km=50, max_segments=50, max_concurrent=100)
 
 
 @click.command()
@@ -17,7 +18,7 @@ def import_data(file: str):
     start_time = time.time()
     path = Path(file)
     loader = OSMIngestor(Settings)
-    loader.ingest_file(path)
+    loader.ingest_file(path, parallelism=multiprocessing.cpu_count())
     result = loader.result()
     ingest_time = time.time()
     click.secho(

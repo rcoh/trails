@@ -1,4 +1,4 @@
-from django.contrib.gis.geos import Point
+from django.contrib.gis.geos import Point, LineString
 from django.core.validators import validate_comma_separated_integer_list
 from django.contrib.gis.db import models
 
@@ -73,7 +73,7 @@ class Route(models.Model):
     elevation_gain = models.FloatField()
     elevation_loss = models.FloatField()
     is_loop = models.BooleanField()
-    nodes = models.TextField(validators=[validate_comma_separated_integer_list])
+    nodes = models.LineStringField()
     trailhead = models.ForeignKey(Trailhead, on_delete=models.CASCADE)
 
     @classmethod
@@ -84,13 +84,12 @@ class Route(models.Model):
             trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
-        node_rep = ",".join([str(n.id) for n in subpath.nodes()])
         return cls(
             trail_network=trail_network,
             length_km=subpath.length_km(),
             elevation_gain=elev.gain,
             elevation_loss=elev.loss,
             is_loop=subpath.is_complete(),
-            nodes=node_rep,
+            nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
             trailhead=trailhead,
         )
