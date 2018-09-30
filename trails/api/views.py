@@ -146,6 +146,14 @@ def find_loops(filter: GeneralFilter):
         length_km__lt=max_length,
         length_km__gt=min_length,
     )
+
+    if filtered.count() == 0:
+        closest_matches = (
+            Route.objects.filter(trailhead__in=possible_trailheads)
+            .extra(select={"delta_len": f"abs(length_km-{filter.length_filter.value})"})
+            .order_by("delta_len")[:5]
+        )
+        filtered = Route.objects.filter(id__in=closest_matches)
     if filter.ordering is not None:
         filtered = filter.ordering.apply(filtered, possible_trailheads)
     return filtered

@@ -20,16 +20,6 @@ class TrailNetwork(models.Model):
             unique_id=osm_network.unique_id()[:100],
         )
 
-    # def matches(self, other_network):
-    #     ourways = set(self.way_ids.split(','))
-    #     theirways = set(other_network.way_ids.split(','))
-    #     total_ways = max(len(ourways), len(theirways))
-    #     overlap = ourways.intersection(theirways)
-    #     if len(overlap) / total_ways > .8:
-    #         return True
-    # coordinates JSON serialized
-    # coords = models.TextField()
-
 
 class Node(models.Model):
     point = models.PointField()
@@ -72,12 +62,12 @@ class TravelTime(models.Model):
 
 class Route(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
-    length_km = models.FloatField()
-    elevation_gain = models.FloatField()
+    length_km = models.FloatField(db_index=True)
+    elevation_gain = models.FloatField(db_index=True)
     elevation_loss = models.FloatField()
     is_loop = models.BooleanField()
     nodes = models.LineStringField()
-    trailhead = models.ForeignKey(Trailhead, on_delete=models.CASCADE)
+    trailhead = models.ForeignKey(Trailhead, db_index=True, on_delete=models.CASCADE)
     quality = models.FloatField()
 
     @classmethod
@@ -96,5 +86,5 @@ class Route(models.Model):
             is_loop=subpath.is_complete(),
             nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
             trailhead=trailhead,
-            quality=subpath.quality()
+            quality=subpath.quality(),
         )

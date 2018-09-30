@@ -71,8 +71,10 @@ def proc_trailhead(args):
         loop.elevation_change()
     return (network, new_loops)
 
+
 class QualitySettings(NamedTuple):
     repeat_node_weight: int
+
 
 class IngestSettings(NamedTuple):
     max_concurrent: int
@@ -81,12 +83,13 @@ class IngestSettings(NamedTuple):
     quality_settings: QualitySettings
 
 
-
-
 DefaultQualitySettings = QualitySettings(repeat_node_weight=1)
 
 DefaultIngestSettings = IngestSettings(
-    max_concurrent=1000, max_distance_km=50, max_segments=50, quality_settings=DefaultQualitySettings
+    max_concurrent=1000,
+    max_distance_km=50,
+    max_segments=50,
+    quality_settings=DefaultQualitySettings,
 )
 
 
@@ -192,11 +195,11 @@ def segment_trails(trails: List[Trail]):
 
 
 def find_loops_from_root(
-        trail_network: TrailNetwork,
-        root,
-        max_segments=20,
-        max_distance_km=10,
-        max_concurrent=1000,
+    trail_network: TrailNetwork,
+    root,
+    max_segments=20,
+    max_distance_km=10,
+    max_concurrent=1000,
 ):
     random.seed(735)
     complete_paths: List[Subpath] = []
@@ -206,13 +209,13 @@ def find_loops_from_root(
         filtered_paths = []
         for path in active_paths:
             if (
-                    path.length_km() < max_distance_km
-                    and len(path.trail_segments) < max_segments
+                path.length_km() < max_distance_km
+                and len(path.trail_segments) < max_segments
             ):
                 filtered_paths.append(path)
         active_paths = filtered_paths
         final_paths = []
-        active_paths = sorted(active_paths, key=lambda path: -1*path.quality())
+        active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
         active_paths = filter_similar(active_paths)
         active_paths = active_paths[:max_concurrent]
         for path in active_paths:
@@ -227,17 +230,19 @@ def find_loops_from_root(
         active_paths = final_paths
     return complete_paths
 
+
 def filter_similar(subpaths: List[Subpath]):
     to_drop = set()
-    for (p1, p2) in itertools.combinations(subpaths, 2):
-        if abs(p2.length_km() - p1.length_km()) < 1:
-            if p2.similarity(p1) > .999:
-                to_drop.add(p2)
+    clusters = collections.defaultdict(list)
+    for path in subpaths:
+        clusters[round(path.length_km())].append(path)
+
+    for cluster in clusters.values():
+        for (p1, p2) in itertools.combinations(cluster, 2):
+            if abs(p2.length_km() - p1.length_km()) < 0.1:
+                if p2.similarity(p1) > 0.99:
+                    to_drop.add(p2)
     assert to_drop == set() or len(to_drop) < len(subpaths), f"{to_drop}, {subpaths}"
     ret = [p for p in subpaths if p not in to_drop]
-    for (p1, p2) in itertools.combinations(ret, 2):
-        if p1.similarity(p2) > .999:
-            import pdb; pdb.set_trace()
 
     return ret
-

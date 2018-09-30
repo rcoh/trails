@@ -21,8 +21,9 @@ schematics = "==2.1.0"
 djangorestframework-gis = "==0.13"
 "SRTM.py" = "==0.3.4"
 Django = "==2.1.1"
+py-spy = "*"
 
 [dev-packages]
 
 [requires]
-python_version = "3.6"
+python_version = "3.7"

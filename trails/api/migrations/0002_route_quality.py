@@ -5,15 +5,13 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0001_initial'),
-    ]
+    dependencies = [("api", "0001_initial")]
 
     operations = [
         migrations.AddField(
-            model_name='route',
-            name='quality',
+            model_name="route",
+            name="quality",
             field=models.FloatField(default=0),
             preserve_default=False,
-        ),
+        )
     ]

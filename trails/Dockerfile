@@ -10,7 +10,7 @@ RUN apt-get install -y gdal-bin libsqlite3-mod-spatialite
 # Hack for pyosmium (https://github.com/osmcode/pyosmium/issues/52)
 RUN rm /usr/lib/x86_64-linux-gnu/libboost_python.so
 RUN ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python.so
-COPY requirements.txt /app/
+COPY Pipfile Pipfile.lock /app/
 RUN pip install pipenv
 RUN pipenv install
 COPY . /app/

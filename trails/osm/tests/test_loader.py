@@ -11,7 +11,8 @@ from osm.loader import (
     OSMIngestor,
     find_loops_from_root,
     IngestSettings,
-    DefaultQualitySettings)
+    DefaultQualitySettings,
+)
 from osm.model import Subpath, Trail
 
 
@@ -67,7 +68,12 @@ def test_loader(huddart_trails):
     assert trail_names == expected
 
 
-TestSettings = IngestSettings(max_segments=20, max_distance_km=20, max_concurrent=10, quality_settings=DefaultQualitySettings)
+TestSettings = IngestSettings(
+    max_segments=20,
+    max_distance_km=20,
+    max_concurrent=10,
+    quality_settings=DefaultQualitySettings,
+)
 
 
 def test_trail_network(test_data, huddart_trails):
@@ -106,9 +112,8 @@ def test_trail_network(test_data, huddart_trails):
 def test_loop_finder(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "huddart.osm")
-    subpaths = [subpath for tn, subpaths in ingestor.loops.items() for subpath in subpaths]
+    subpaths = [
+        subpath for tn, subpaths in ingestor.loops.items() for subpath in subpaths
+    ]
     quality = sum([subpath.quality() for subpath in subpaths]) / len(subpaths)
     assert quality > 0.90
-
-
-

@@ -71,7 +71,7 @@ class Trail:
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx: idx + 1]
+            new_nodes = self.nodes[start_idx : idx + 1]
             new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
             result.append(
                 Trail(
@@ -171,8 +171,10 @@ class TrailNetwork:
         for edge in self.graph.edges:
             yield self.graph[edge[0]][edge[1]]["trail"]
 
+
 def filt_neg(d):
-    return {k:v for k,v in d.items() if v > 0}
+    return {k: v for k, v in d.items() if v > 0}
+
 
 class Subpath:
     def __init__(self, segments: List[Trail]) -> None:
@@ -184,7 +186,7 @@ class Subpath:
 
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
 
-    def similarity(self, other: 'Subpath'):
+    def similarity(self, other: "Subpath"):
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
         unique_paths = Counter()
         unique_paths += self.segment_dist
