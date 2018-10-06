@@ -6,8 +6,12 @@ from typing import NamedTuple, List, Set, Iterator, Dict
 import geopy.distance
 import srtm
 from networkx.classes.graphviews import SubGraph
+import gpxpy
+import gpxpy.gpx
 
 from osm.util import memoize, window, verify_identical_nodes
+
+elevation = srtm.get_data()
 
 
 class Node(NamedTuple):
@@ -15,8 +19,11 @@ class Node(NamedTuple):
     lat: float
     lon: float
 
+    def elevation(self):
+        return elevation.get_elevation(self.lat, self.lon)
 
-elevation = srtm.get_data()
+    def distance(self, other: 'Node'):
+        return geopy.distance.great_circle((self.lat, self.lon), (other.lat, other.lon))
 
 
 class ElevationChange(NamedTuple):
@@ -25,16 +32,26 @@ class ElevationChange(NamedTuple):
 
     @classmethod
     def from_nodes(cls, nodes: Iterator[Node]):
-        gain = 0
-        loss = 0
-        for n1, n2 in window(nodes):
-            e1 = elevation.get_elevation(n1.lat, n1.lon)
-            e2 = elevation.get_elevation(n2.lat, n2.lon)
-            if e2 > e1:
-                gain += e2 - e1
-            else:
-                loss += e1 - e2
+        gpx = gpxpy.gpx.GPX()
+
+        # Create first track in our GPX:
+        gpx_track = gpxpy.gpx.GPXTrack()
+        gpx.tracks.append(gpx_track)
+
+        # Create first segment in our GPX track:
+        gpx_segment = gpxpy.gpx.GPXTrackSegment()
+        gpx_track.segments.append(gpx_segment)
+
+        # Create points:
+        for node in nodes:
+            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(latitude=node.lat, longitude=node.lon))
+
+        elevation.add_elevations(gpx, smooth=True)
+        (gain, loss) = gpx_segment.get_uphill_downhill()
         return cls(gain, loss)
+
+
+trail_length_cache = {}
 
 
 class Trail:
@@ -71,7 +88,7 @@ class Trail:
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx : idx + 1]
+            new_nodes = self.nodes[start_idx: idx + 1]
             new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
             result.append(
                 Trail(
@@ -114,7 +131,7 @@ class Trail:
         lats = [n.lat for n in self.nodes]
         lons = [n.lon for n in self.nodes]
         color = color or random.choice(list(gmap.html_color_codes.keys()))
-        gmap.plot(lats, lons, color, edge_width=5)
+        gmap.plot(lats, lons, color, edge_width=2)
 
 
 class Trailhead(NamedTuple):
@@ -177,14 +194,23 @@ def filt_neg(d):
 
 
 class Subpath:
-    def __init__(self, segments: List[Trail]) -> None:
+    def __init__(self, segments: List[Trail], length_km, unique_length) -> None:
         self.start_node = segments[0].nodes[0]
         self.trail_segments = segments
         self.segment_dist = Counter()
         for s in self.trail_segments:
             self.segment_dist.update({s.id: s.length().km})
 
+        self.length_km = length_km
+        self.unique_length = unique_length
+
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
+
+    @classmethod
+    def from_segments(cls, segments: List[Trail]):
+        length_km = sum([segment.length().km for segment in segments])
+        # TODO: wrong
+        return Subpath(segments, length_km, length_km)
 
     def similarity(self, other: "Subpath"):
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
@@ -194,23 +220,14 @@ class Subpath:
 
         unique_distance = sum([abs(v) for v in unique_paths.values()])
 
-        total_distance = self.length_km() + other.length_km()
+        total_distance = self.length_km + other.length_km
         return 1 - unique_distance / total_distance
 
     @memoize
     def quality(self, repeat_weight=1):
-        if self.length_km() == 0:
+        if self.length_km == 0:
             return 1
-        # repeat = unique_length / total_length
-        visited_trails = set()
-        unique_length = 0
-        total_length = 0
-        for trail in self.trail_segments:
-            if trail.id not in visited_trails:
-                unique_length += trail.length().m
-                visited_trails.add(trail.id)
-            total_length += trail.length().m
-        repeat_quality = unique_length / total_length
+        repeat_quality = self.unique_length / self.length_km
         return repeat_quality * repeat_weight
 
     @classmethod
@@ -220,7 +237,7 @@ class Subpath:
                 way_id="fakeroot", name="fakeroot", nodes=[starting_node, starting_node]
             )
         ]
-        return cls(trail_segments)
+        return cls(trail_segments, 0, 0)
 
     def add_node(self, trail_segment: Trail):
         current_final = self.last_node()
@@ -229,7 +246,13 @@ class Subpath:
         else:
             new_segment = trail_segment.reverse()
 
-        return Subpath(list(self.trail_segments) + [new_segment])
+        if new_segment.id not in self.segment_dist:
+            unique_length = new_segment.length().km
+        else:
+            unique_length = 0
+
+        return Subpath(list(self.trail_segments) + [new_segment], length_km=self.length_km + new_segment.length().km,
+                       unique_length=self.unique_length + unique_length)
 
     def nodes(self) -> Iterator[Node]:
         for seg in self.trail_segments:
@@ -254,7 +277,7 @@ class Subpath:
         names = [seg.name for seg in self.trail_segments]
         if self.is_complete():
             names.append("fakeroot")
-        return f'{self.length_km()}: {"<->".join(names)}'
+        return f'{self.length_km}: {"<->".join(names)}'
 
     def draw(self, gmap):
         for trail in self.trail_segments:

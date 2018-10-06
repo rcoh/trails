@@ -13,7 +13,7 @@ from osm.loader import (
     IngestSettings,
     DefaultQualitySettings,
 )
-from osm.model import Subpath, Trail
+from osm.model import Subpath, Trail, Node, ElevationChange
 
 
 @fixture
@@ -117,3 +117,13 @@ def test_loop_finder(test_data, huddart_trails):
     ]
     quality = sum([subpath.quality() for subpath in subpaths]) / len(subpaths)
     assert quality > 0.90
+
+def test_elevation_change():
+    home = Node(id=0, lat=37.47463,lon=-122.23131)
+    assert home.elevation() == 7
+    windy_hill = Node(id=1, lat=37.3646627, lon=-122.246078)
+    assert windy_hill.elevation() == 575
+
+    assert ElevationChange.from_nodes([home, home, windy_hill, windy_hill, home]) == ElevationChange(gain=568, loss=568)
+
+

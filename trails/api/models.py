@@ -80,7 +80,7 @@ class Route(models.Model):
         elev = subpath.elevation_change()
         return cls(
             trail_network=trail_network,
-            length_km=subpath.length_km(),
+            length_km=subpath.length_km,
             elevation_gain=elev.gain,
             elevation_loss=elev.loss,
             is_loop=subpath.is_complete(),

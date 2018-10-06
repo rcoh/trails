@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import List, Dict, NamedTuple, Iterator, Optional, Set
 
 import collections
+import geopy.distance
 import networkx as nx
 import osmium as o
 from tqdm import tqdm
@@ -26,15 +27,29 @@ def drivable(way):
     accessible = way.tags.get("access") in ["yes", "permissive", None]
     return not is_trail(way) and accessible and not no_cars
 
+class LocationFilter(NamedTuple):
+    lat: float
+    lon: float
+    radius_km: float
+
+    def tup(self):
+        return (self.lat, self.lon)
 
 class OsmiumTrailLoader(o.SimpleHandler):
-    def __init__(self):
+    def __init__(self, location_filter: Optional[LocationFilter]=None):
         super(OsmiumTrailLoader, self).__init__()
         self.trails: Dict[int, Trail] = {}
         self.non_trail_nodes: Dict[int, str] = {}
+        self.location_filter = location_filter
 
     def way(self, w):
         if "highway" in w.tags:
+            if self.location_filter:
+                first_node = w.nodes[0]
+                start = first_node.lat, first_node.lon
+                dist_from_here = geopy.distance.great_circle(self.location_filter.tup(), start).km
+                if dist_from_here > self.location_filter.radius_km:
+                    return
             if is_trail(w):
                 try:
                     self.trails[w.id] = Trail.from_way(w)
@@ -56,8 +71,7 @@ class OsmLoadResult(NamedTuple):
 
 
 def proc_trailhead(args):
-    trailhead, network_map, settings = args
-    network = network_map[trailhead]
+    trailhead, network, settings = args
     new_loops = list(
         find_loops_from_root(
             network,
@@ -67,6 +81,7 @@ def proc_trailhead(args):
             max_segments=settings.max_segments,
         )
     )
+    new_loops = filter_similar(new_loops)
     for loop in new_loops:
         loop.elevation_change()
     return (network, new_loops)
@@ -81,6 +96,7 @@ class IngestSettings(NamedTuple):
     max_distance_km: int
     max_segments: int
     quality_settings: QualitySettings
+    location_filter: Optional[LocationFilter] = None
 
 
 DefaultQualitySettings = QualitySettings(repeat_node_weight=1)
@@ -106,29 +122,46 @@ class OSMIngestor:
     def ingest_file(self, filename: Path, parallelism=1):
         # TODO: figure out file bounds, delete data within those bounds
         before_trailheads = set(self.trailheads())
-        osm_loader = OsmiumTrailLoader()
+        osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         osm_loader.apply_file(str(filename), locations=True)
-        self.trails.update(osm_loader.trails)
+        print(f'Before applying location filter: {len(osm_loader.trails)}')
+        trails = self.apply_location_filter(osm_loader.trails)
+        print(f'After applying location filter: {len(trails)}')
+        self.trails.update(trails)
         self.non_trail_nodes.update(osm_loader.non_trail_nodes)
-        self.add_trails_to_graph(osm_loader.trails.values())
+        self.add_trails_to_graph(trails.values())
         after_trailheads = set(self.trailheads())
 
         new_trailheads = after_trailheads - before_trailheads
         network_map = self.trailead_network_map()
 
         trailheads_to_process = [
-            (trailhead, network_map, self.ingest_settings)
+            (trailhead, network_map[trailhead], self.ingest_settings)
             for trailhead in new_trailheads
         ]
 
         if parallelism > 1:
             p = Pool(parallelism)
-            iter = p.imap_unordered(proc_trailhead, trailheads_to_process)
+            iter = p.imap_unordered(proc_trailhead, trailheads_to_process, chunksize=10)
         else:
             iter = map(proc_trailhead, trailheads_to_process)
 
         for (network, loops) in tqdm(iter, total=len(trailheads_to_process)):
             self.loops[network] += loops
+
+    def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
+        res = {}
+        if self.ingest_settings.location_filter:
+            here = (self.ingest_settings.location_filter.lat, self.ingest_settings.location_filter.lon)
+            max_dist_km = self.ingest_settings.location_filter.radius_km
+            for id, trail in trails.items():
+                trail_start = (trail.nodes[0].lat, trail.nodes[0].lon)
+                dist_from_here = geopy.distance.great_circle(here, trail_start).km
+                if dist_from_here < max_dist_km:
+                    res[id] = trail
+        else:
+            res = trails
+        return res
 
     def result(self) -> OsmLoadResult:
         tn: List[TrailNetwork] = list(self.trail_networks())
@@ -155,7 +188,7 @@ class OSMIngestor:
     def trail_networks(self):
         G = self.global_graph
         for c in nx.connected_components(G):
-            subgraph = G.subgraph(c)
+            subgraph = G.subgraph(c).copy()
             network = TrailNetwork(subgraph, self.non_trail_nodes)
             if network.total_length_km() > 5:
                 yield network
@@ -171,6 +204,17 @@ class OSMIngestor:
         for network in self.trail_networks():
             for trailhead in network.trailheads:
                 yield trailhead
+
+    def write_to_map(self, filename, gmap):
+        osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
+        osm_loader.apply_file(str(filename), locations=True)
+        print(f'Before applying location filter: {len(osm_loader.trails)}')
+        trails = self.apply_location_filter(osm_loader.trails)
+        for _, trail in trails.items():
+            trail.draw(gmap)
+
+
+
 
 
 def segment_trails(trails: List[Trail]):
@@ -202,20 +246,20 @@ def find_loops_from_root(
     max_concurrent=1000,
 ):
     random.seed(735)
-    complete_paths: List[Subpath] = []
     subgraph = trail_network.graph
     active_paths = [Subpath.from_startnode(root)]
     while active_paths:
         filtered_paths = []
         for path in active_paths:
             if (
-                path.length_km() < max_distance_km
+                path.length_km < max_distance_km
                 and len(path.trail_segments) < max_segments
             ):
                 filtered_paths.append(path)
         active_paths = filtered_paths
         final_paths = []
         active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
+        active_paths = [path for path in active_paths if path.quality() > 0.7]
         active_paths = filter_similar(active_paths)
         active_paths = active_paths[:max_concurrent]
         for path in active_paths:
@@ -226,23 +270,26 @@ def find_loops_from_root(
                 new_path = path.add_node(next_trail["trail"])
                 if new_path.is_complete():
                     yield new_path
-                final_paths.append(new_path)
+                else:
+                    final_paths.append(new_path)
         active_paths = final_paths
-    return complete_paths
 
 
 def filter_similar(subpaths: List[Subpath]):
     to_drop = set()
-    clusters = collections.defaultdict(list)
-    for path in subpaths:
-        clusters[round(path.length_km())].append(path)
-
-    for cluster in clusters.values():
-        for (p1, p2) in itertools.combinations(cluster, 2):
-            if abs(p2.length_km() - p1.length_km()) < 0.1:
-                if p2.similarity(p1) > 0.99:
-                    to_drop.add(p2)
+    for (p1, p2) in itertools.combinations(subpaths, 2):
+        # 20% length difference
+        if abs((p2.length_km - p1.length_km) / p2.length_km) < .2:
+            if p2.similarity(p1) > 0.8:
+                to_drop.add(p2)
     assert to_drop == set() or len(to_drop) < len(subpaths), f"{to_drop}, {subpaths}"
     ret = [p for p in subpaths if p not in to_drop]
 
     return ret
+
+def evaluate_quality_metrics(subpaths: List[Subpath]):
+    pass
+    # distance histogram
+    # elevation histogram
+    # similarity metrics
+    # quality metrics

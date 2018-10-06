@@ -21,6 +21,7 @@ class RouteSerializer(serializers.ModelSerializer):
     class Meta:
         model = Route
         fields = (
+            "id",
             "length_km",
             "trailhead",
             "trail_network",
@@ -28,7 +29,16 @@ class RouteSerializer(serializers.ModelSerializer):
             "elevation_loss",
             "is_loop",
             "nodes",
+            "quality",
         )
+
+    def to_representation(self, instance):
+        base = super().to_representation(instance)
+        return {
+            'travel_time': int(self.context['trailheads'][instance.trailhead] / 60),
+            **base,
+        }
+
 
 
 class NodeSerializer(serializers.ModelSerializer):

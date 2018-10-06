@@ -7,9 +7,11 @@ import "react-table/react-table.css";
 import "./App.css";
 import Geosuggest from "react-geosuggest";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
+import Slider, { Range } from 'rc-slider';
+import 'rc-slider/assets/index.css';
 
 /*global google*/
-const server = "http://localhost:8000";
+const server = process.env['REACT_APP_SERVER'] || 'http://localhost:8000';
 // Select address
 // Show trailheads on map
 //
@@ -59,7 +61,6 @@ class App extends Component {
             results={this.state.results}
             onSelect={this.onTrailSelect}
           />
-          ;
         </div>
       );
     }
@@ -136,12 +137,21 @@ const minimizeElevation = { field: "elevation", asc: true };
 const maximizeElevation = { field: "elevation", asc: false };
 const minimizeTravelTime = { field: "travel", asc: true };
 
+const SliderT = Slider.createSliderWithTooltip(Slider);
+const sliderStyle = {
+  width: '30%'
+}
+
 class ResultHistogram extends Component {
   constructor(props) {
     super(props);
   }
 
   render() {
+    const marks = {};
+    this.props.elevations.forEach(v => {marks[v] = ''});
+
+    //<SliderT min={this.props.elevation.min} max={this.props.elevation.max} style={sliderStyle} marks={marks}/>
     return (
       <div>
         <button onClick={() => this.props.select(minimizeElevation)}>
@@ -161,6 +171,7 @@ class ResultHistogram extends Component {
 
 ResultHistogram.propTypes = {
   elevation: minMax.isRequired,
+  elevations: PropTypes.array.isRequired,
   distance: minMax.isRequired,
   travel_time: minMax.isRequired,
   select: PropTypes.func.isRequired
@@ -171,22 +182,42 @@ class ResultTable extends Component {
     super(props);
     this.state = { selected: null };
   }
-  render() {
-    const columns = [
+
+  downloadFile(props) {
+  }
+  columns = [
       {
-        Header: "Length",
-        accessor: "length_km"
+        Header: "Length (km)",
+        accessor: "length_km",
+        Cell: props => props.value.toFixed(1)
       },
       {
-        Header: "Elevation",
-        accessor: "elevation_gain"
-      }
-    ];
+        Header: "Elevation Gain (m)",
+        accessor: "elevation_gain",
+        Cell: props => props.value.toFixed(0)
+      },
+      {
+        Header: "Travel Time (minutes)",
+        accessor: "travel_time"
+      },
+      {
+        Header: "Export Gpx",
+        accessor: "id",
+        Cell: props =>
+	<div>
+		<button onClick={() => window.location.href=`${server}/api/export/?id=${props.value}`}>
+                    Export GPX
+		</button>	
+	</div>
+      },
+  ];
+
+  render() {
     const that = this;
     return (
       <ReactTable
         data={this.props.results}
-        columns={columns}
+        columns={this.columns}
         getTrProps={(state, rowInfo) => {
           if (rowInfo && rowInfo.row) {
             return {
@@ -253,7 +284,7 @@ const TrailMap = compose(
       const point = { lat, lng: lon };
       return point;
     });
-    trail = <Polyline path={path} />;
+    trail = <Polyline path={path} options={{strokeOpacity: 0.2}} />;
     marker = (
       <Marker position={{ lat: props.trail[0].lat, lng: props.trail[0].lon }} />
     );

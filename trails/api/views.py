@@ -1,7 +1,10 @@
-from collections import defaultdict
+from io import StringIO
 from typing import Optional, NamedTuple, Dict
+from wsgiref.util import FileWrapper
 
+import gpxpy.gpx
 from django.contrib.gis.geos import Point
+from django.http import HttpResponse
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -139,7 +142,7 @@ def nearby_trailheads(request):
 
 
 def find_loops(filter: GeneralFilter):
-    possible_trailheads = trailheads_near(filter.trailhead_filter)
+    possible_trailheads: Dict[Trailhead, int] = trailheads_near(filter.trailhead_filter)
     min_length, max_length = filter.length_filter.bounds()
     filtered = Route.objects.filter(
         trailhead__in=possible_trailheads,
@@ -156,7 +159,7 @@ def find_loops(filter: GeneralFilter):
         filtered = Route.objects.filter(id__in=closest_matches)
     if filter.ordering is not None:
         filtered = filter.ordering.apply(filtered, possible_trailheads)
-    return filtered
+    return filtered, possible_trailheads
 
 
 @api_view(["POST"])
@@ -166,27 +169,55 @@ def histogram(request):
         return Response(request.errors, status=status.HTTP_400_BAD_REQUEST)
 
     filter = request.to_nt(request.validated_data)
-    routes = find_loops(filter)
-    # cached
-    possible_trailheads = trailheads_near(filter.trailhead_filter)
+    routes, possible_trailheads = find_loops(filter)
+    actual_trailheads = {route.trailhead: possible_trailheads[route.trailhead] for route in routes}
 
     ret = {
         "num_routes": len(routes),
-        "num_trailheads": len(possible_trailheads),
+        "num_trailheads": len(actual_trailheads),
         "elevation": {
             "max": max([route.elevation_gain for route in routes]),
             "min": min([route.elevation_gain for route in routes]),
         },
         "travel_time": {
-            "max": max(possible_trailheads.values()),
-            "min": min(possible_trailheads.values()),
+            "max": max(actual_trailheads.values()),
+            "min": min(actual_trailheads.values()),
         },
         "distance": {
             "max": max(route.length_km for route in routes),
             "min": min(route.length_km for route in routes),
         },
+        'elevations': [route.elevation_gain for route in routes]
     }
     return Response(ret, status=200)
+
+@api_view(["GET"])
+def export_gpx(request):
+    id = request.query_params['id']
+    route = Route.objects.get(id=id)
+    nodes = route.nodes
+    gpx = gpxpy.gpx.GPX()
+
+    # Create first track in our GPX:
+    gpx_track = gpxpy.gpx.GPXTrack()
+    gpx.tracks.append(gpx_track)
+
+    # Create first segment in our GPX track:
+    gpx_segment = gpxpy.gpx.GPXTrackSegment()
+    gpx_track.segments.append(gpx_segment)
+
+    # Create points:
+    for node in nodes:
+        gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(latitude=node[0], longitude=node[1]))
+
+    data = gpx.to_xml()
+    outfile = StringIO()
+    outfile.write(data)
+    outfile.close()
+    response = HttpResponse(data, content_type='application/gpx')
+    response['Content-Disposition'] = 'attachment; filename=route.gpx'
+    return response
+
 
 
 @api_view(["POST"])
@@ -195,5 +226,9 @@ def top_trails(request):
     if not request.is_valid():
         return Response(request.errors, status=status.HTTP_400_BAD_REQUEST)
     filter = request.to_nt(request.validated_data)
-    routes = find_loops(filter)[:5]
-    return Response(RouteSerializer(routes, many=True).data, status=200)
+    routes, trailheads = find_loops(filter)
+    return Response(RouteSerializer(routes[:5], many=True, context=dict(trailheads=trailheads)).data, status=200)
+
+@api_view(["GET"])
+def statusz(request):
+    return Response({}, status=200)

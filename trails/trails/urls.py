@@ -17,8 +17,11 @@ from django.conf.urls import url
 from django.contrib import admin
 from django.urls import path, include
 
+import api
+
 urlpatterns = [
     path("admin/", admin.site.urls),
     url(r"^restadmin/", include("rest_framework.urls")),
     url(r"^api/", include("api.urls")),
+    # url(r"", api.views.statusz)
 ]
