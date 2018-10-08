@@ -57,10 +57,12 @@ def import_data(file: str, center, radius, parallelism, reset):
     trailheads: Dict[int, Trailhead] = {}
     for trail_network_osm, loops in tqdm(result.loops.items()):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
+        TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
         tn.save()
         for trailhead_osm in tqdm(trail_network_osm.trailheads, desc="Trailheads"):
             n = Node.from_osm_node(trailhead_osm.node)
             n.save()
+            Trailhead.objects.filter(node__osm_id=n.osm_id).delete()
             trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)
             trailhead.save()
             trailheads[trailhead_osm.node.id] = trailhead

@@ -223,11 +223,17 @@ class Subpath:
         total_distance = self.length_km + other.length_km
         return 1 - unique_distance / total_distance
 
+    def is_pure_out_and_back(self):
+        ts_ids = [ts.id for ts in self.trail_segments]
+        return ts_ids == ts_ids[::-1]
+
     @memoize
     def quality(self, repeat_weight=1):
         if self.length_km == 0:
             return 1
         repeat_quality = self.unique_length / self.length_km
+        if self.num_spurs() > 1:
+            return 0
         return repeat_quality * repeat_weight
 
     @classmethod
@@ -239,6 +245,13 @@ class Subpath:
         ]
         return cls(trail_segments, 0, 0)
 
+    @memoize
+    def num_spurs(self):
+        n = 0
+        for (t1, t2) in window(self.trail_segments):
+            if t1.id == t2.id:
+                n += 1
+        return n
     def add_node(self, trail_segment: Trail):
         current_final = self.last_node()
         if trail_segment.nodes[0] == current_final:

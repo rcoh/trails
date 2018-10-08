@@ -15,10 +15,14 @@ from osm.util import verify_identical_nodes
 
 TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
 INACCESSIBLE = {"service"}
-
+BAD_FOOTWAYS = {"sidewalk", "crossing"}
 
 def is_trail(way):
-    return way.tags["highway"] in TRAIL
+    trail_like = way.tags["highway"] in TRAIL
+    if trail_like and way.tags.get('footway') in BAD_FOOTWAYS:
+        return False
+    return trail_like
+
 
 
 def drivable(way):
@@ -69,6 +73,12 @@ class OsmLoadResult(NamedTuple):
     def total_loops(self):
         return sum([len(l) for l in self.loops.values()])
 
+MIN_QUALITY = .7
+def worth_keeping(loop: Subpath):
+    if loop.is_pure_out_and_back():
+        return True
+    else:
+        return loop.quality() > MIN_QUALITY
 
 def proc_trailhead(args):
     trailhead, network, settings = args
@@ -82,6 +92,8 @@ def proc_trailhead(args):
         )
     )
     new_loops = filter_similar(new_loops)
+    # TODO: hide bad routes in the UI?
+    new_loops = [loop for loop in new_loops if worth_keeping(loop)]
     for loop in new_loops:
         loop.elevation_change()
     return (network, new_loops)
@@ -89,6 +101,7 @@ def proc_trailhead(args):
 
 class QualitySettings(NamedTuple):
     repeat_node_weight: int
+    min_quality: float = 0.8
 
 
 class IngestSettings(NamedTuple):
@@ -259,13 +272,14 @@ def find_loops_from_root(
         active_paths = filtered_paths
         final_paths = []
         active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
-        active_paths = [path for path in active_paths if path.quality() > 0.7]
+        if len(active_paths) > max_concurrent:
+            active_paths = [path for path in active_paths if path.quality() > 0.7]
         active_paths = filter_similar(active_paths)
         active_paths = active_paths[:max_concurrent]
         for path in active_paths:
             options = list(dict(subgraph[path.last_node()]).items())
             for next_node, next_trail in options:
-                if next_trail["trail"].id == path.trail_segments[-1].id:
+                if next_trail["trail"].id == path.trail_segments[-1].id and len(options) > 1:
                     continue
                 new_path = path.add_node(next_trail["trail"])
                 if new_path.is_complete():
