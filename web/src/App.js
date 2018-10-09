@@ -7,11 +7,11 @@ import "react-table/react-table.css";
 import "./App.css";
 import Geosuggest from "react-geosuggest";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
-import Slider, { Range } from 'rc-slider';
-import 'rc-slider/assets/index.css';
+import Slider, { Range } from "rc-slider";
+import "rc-slider/assets/index.css";
 
 /*global google*/
-const server = process.env['REACT_APP_SERVER'] || 'http://localhost:8000';
+const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
 // Select address
 // Show trailheads on map
 //
@@ -30,7 +30,13 @@ class App extends Component {
     this.onTrailSelect = this.onTrailSelect.bind(this);
   }
   onSuggestSelect(suggest) {
-    this.setState({ location: suggest.location });
+    if (suggest) {
+      this.setState({
+        location: suggest.location,
+        trailIndex: undefined,
+        histogram: undefined
+      });
+    }
   }
 
   onTrailSelect(index) {
@@ -38,8 +44,11 @@ class App extends Component {
   }
 
   updateDistance(event) {
-    this.setState({ distance: event.target.value });
+    this.setState({
+      distance: event.target.value,
+    });
   }
+
   render() {
     let histogram;
     if (this.state.histogram) {
@@ -52,7 +61,7 @@ class App extends Component {
     if (this.state.results) {
       const trail =
         this.state.trailIndex != null
-          ? this.state.results[this.state.trailIndex].nodes
+          ? this.state.results[this.state.trailIndex]
           : undefined;
       results = (
         <div>
@@ -60,6 +69,7 @@ class App extends Component {
           <ResultTable
             results={this.state.results}
             onSelect={this.onTrailSelect}
+            rowIndex={this.state.trailIndex}
           />
         </div>
       );
@@ -96,8 +106,12 @@ class App extends Component {
       ordering
     };
     const trails = await loadAPI("trails/", loc);
-    this.setState({ results: trails });
+    this.setState({
+      results: trails,
+      trailIndex: trails.length > 0 ? 0 : undefined
+    });
   }
+
   async loadHistogram(event) {
     const loc = {
       location_filter: {
@@ -110,7 +124,7 @@ class App extends Component {
       }
     };
     const histogram = await loadAPI("histogram/", loc);
-    this.setState({ histogram });
+    this.setState({ histogram, results: undefined });
   }
 }
 
@@ -139,8 +153,8 @@ const minimizeTravelTime = { field: "travel", asc: true };
 
 const SliderT = Slider.createSliderWithTooltip(Slider);
 const sliderStyle = {
-  width: '30%'
-}
+  width: "30%"
+};
 
 class ResultHistogram extends Component {
   constructor(props) {
@@ -149,7 +163,9 @@ class ResultHistogram extends Component {
 
   render() {
     const marks = {};
-    this.props.elevations.forEach(v => {marks[v] = ''});
+    this.props.elevations.forEach(v => {
+      marks[v] = "";
+    });
 
     //<SliderT min={this.props.elevation.min} max={this.props.elevation.max} style={sliderStyle} marks={marks}/>
     return (
@@ -180,37 +196,51 @@ ResultHistogram.propTypes = {
 class ResultTable extends Component {
   constructor(props) {
     super(props);
-    this.state = { selected: null };
+    this.state = { selected: undefined };
   }
 
-  downloadFile(props) {
+  componentDidUpdate(prevProps, prevState, snapshot) {
+    if (prevProps.results != this.props.results) {
+      this.setState({selected: undefined});
+    }
   }
+
+  downloadFile(props) {}
   columns = [
-      {
-        Header: "Length (km)",
-        accessor: "length_km",
-        Cell: props => props.value.toFixed(1)
-      },
-      {
-        Header: "Elevation Gain (m)",
-        accessor: "elevation_gain",
-        Cell: props => props.value.toFixed(0)
-      },
-      {
-        Header: "Travel Time (minutes)",
-        accessor: "travel_time"
-      },
-      {
-        Header: "Export Gpx",
-        accessor: "id",
-        Cell: props =>
-	<div>
-		<button onClick={() => window.location.href=`${server}/api/export/?id=${props.value}`}>
-                    Export GPX
-		</button>	
-	</div>
-      },
+    {
+      Header: "Length (km)",
+      accessor: "length_km",
+      Cell: props => props.value.toFixed(1)
+    },
+    {
+      Header: "Elevation Gain (m)",
+      accessor: "elevation_gain",
+      Cell: props => props.value.toFixed(0)
+    },
+    {
+      Header: "Travel Time (minutes)",
+      accessor: "travel_time"
+    },
+    {
+      Header: "Export Gpx",
+      accessor: "id",
+      Cell: props => (
+        <div>
+          <button
+            onClick={() =>
+              (window.location.href = `${server}/api/export/?id=${props.value}`)
+            }
+          >
+            Export GPX
+          </button>
+        </div>
+      )
+    }
   ];
+
+  selectedIndex() {
+    return this.state.selected || this.props.rowIndex;
+  }
 
   render() {
     const that = this;
@@ -229,9 +259,9 @@ class ResultTable extends Component {
               },
               style: {
                 background:
-                  rowInfo.index === this.state.selected ? "#00afec" : "white",
+                  rowInfo.index === this.selectedIndex() ? "#00afec" : "white",
                 color:
-                  rowInfo.index === this.state.selected ? "white" : "black",
+                  rowInfo.index === this.selectedIndex() ? "white" : "black",
                 cursor: "pointer"
               }
             };
@@ -267,7 +297,7 @@ const TrailMap = compose(
     componentDidUpdate() {
       const bounds = new google.maps.LatLngBounds();
       if (this.props.trail) {
-        this.props.trail.forEach(({ lat, lon }) => {
+        this.props.trail.nodes.forEach(({ lat, lon }) => {
           const point = { lat, lng: lon };
           bounds.extend(point);
         });
@@ -280,13 +310,17 @@ const TrailMap = compose(
   let trail;
   let marker;
   if (props.trail) {
-    const path = props.trail.map(({ lat, lon }) => {
+    const path = props.trail.nodes.map(({ lat, lon }) => {
       const point = { lat, lng: lon };
       return point;
     });
-    trail = <Polyline path={path} options={{strokeOpacity: 0.2}} />;
+    trail = <Polyline path={path} options={{ strokeOpacity: 0.9 }} />;
+    const th_node = props.trail.trailhead.node;
     marker = (
-      <Marker position={{ lat: props.trail[0].lat, lng: props.trail[0].lon }} />
+      <Marker
+        position={{ lat: th_node.lat, lng: th_node.lon }}
+        title={`OSM_ID: ${th_node.osm_id}`}
+      />
     );
   }
 

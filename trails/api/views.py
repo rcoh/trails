@@ -18,7 +18,7 @@ class TrailheadFilter(NamedTuple):
     location: Point
     max_travel_time_minutes: float = 25
     travel_mode: str = "driving"
-    distance_km_filter: float = 50
+    distance_km_filter: float = max_travel_time_minutes
 
 
 class Tolerance(NamedTuple):
@@ -115,10 +115,13 @@ class GeneralRequest(serializers.Serializer):
         )
 
 
-def trailheads_near(filter: TrailheadFilter) -> Dict[Trailhead, int]:
+def trailheads_near(filter: TrailheadFilter, length: Optional[Tolerance]) -> Dict[Trailhead, int]:
     possible_trailheads = Trailhead.trailheads_near(
         filter.location, max_distance_km=filter.distance_km_filter
     )
+
+    if length:
+        possible_trailheads = possible_trailheads.filter(trail_network__trail_length_km__gt=length.value)
     return get_travel_times_cached(filter.location, possible_trailheads)
 
 
@@ -128,8 +131,8 @@ def nearby_trailheads(request):
     request = NearbyTrailheadRequest(data=request.data)
     if not request.is_valid():
         return Response(request.errors, status=status.HTTP_400_BAD_REQUEST)
-    general = request.to_nt(request.validated_data)
-    time_filtered = trailheads_near(general)
+    general: TrailheadFilter = request.to_nt(request.validated_data)
+    time_filtered = trailheads_near(general, None)
     resp = []
     for trailhead, time in time_filtered.items():
         resp.append(
@@ -142,7 +145,8 @@ def nearby_trailheads(request):
 
 
 def find_loops(filter: GeneralFilter):
-    possible_trailheads: Dict[Trailhead, int] = trailheads_near(filter.trailhead_filter)
+    possible_trailheads: Dict[Trailhead, int] = trailheads_near(filter.trailhead_filter, filter.length_filter)
+    print(f'found {len(possible_trailheads)} potential trailheads')
     min_length, max_length = filter.length_filter.bounds()
     filtered = Route.objects.filter(
         trailhead__in=possible_trailheads,
@@ -150,7 +154,7 @@ def find_loops(filter: GeneralFilter):
         length_km__gt=min_length,
     )
 
-    if filtered.count() == 0:
+    if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
             .extra(select={"delta_len": f"abs(length_km-{filter.length_filter.value})"})

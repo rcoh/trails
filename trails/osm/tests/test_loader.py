@@ -114,6 +114,14 @@ def test_sidewalk_filter(test_data):
     networks = list(ingestor.trail_networks())
     assert len(networks) == 0
 
+def test_trailhead_cap(test_data):
+    ingestor = OSMIngestor(TestSettings)
+    ingestor.ingest_file(test_data / "gg-park.osm")
+    networks = list(ingestor.trail_networks())
+    import pdb; pdb.set_trace()
+    assert len(networks) == 0
+
+
 def test_loop_finder(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "huddart.osm")

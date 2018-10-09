@@ -1,4 +1,6 @@
 import multiprocessing
+import os
+import pickle
 import time
 from multiprocessing.pool import Pool
 from pathlib import Path
@@ -17,8 +19,9 @@ from tqdm import tqdm
 @click.option('--center', type=click.STRING)
 @click.option('--radius', type=click.INT)
 @click.option('--reset', type=click.BOOL, help='Delete all data before importing', default=False)
+@click.option('--pickle-dir', type=click.STRING, default='/trail-data/backups')
 @click.argument("file", type=click.Path(exists=True))
-def import_data(file: str, center, radius, parallelism, reset):
+def import_data(file: str, center, radius, parallelism, reset, pickle_dir):
     start_time = time.time()
     if center:
         lat, lon = center.split(',')
@@ -37,10 +40,21 @@ def import_data(file: str, center, radius, parallelism, reset):
         location_filter=location_filter
     )
 
+
     path = Path(file)
-    loader = OSMIngestor(Settings)
-    loader.ingest_file(path, parallelism=parallelism)
-    result = loader.result()
+    os.makedirs(pickle_dir, exist_ok=True)
+    if location_filter:
+        backup_file = Path(pickle_dir) / f'{location_filter.digest()}-{path.name}.pickle'
+    else:
+        backup_file = Path(pickle_dir) / f'{path.name}.pickle'
+    if backup_file.exists():
+        result = pickle.load(open(backup_file, 'rb'))
+    else:
+        loader = OSMIngestor(Settings)
+        loader.ingest_file(path, parallelism=parallelism)
+        result = loader.result()
+        with open(backup_file, 'wb') as f:
+            pickle.dump(result, f)
     ingest_time = time.time()
     click.secho(
         f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"
@@ -55,6 +69,7 @@ def import_data(file: str, center, radius, parallelism, reset):
         TravelCache.objects.all().delete()
 
     trailheads: Dict[int, Trailhead] = {}
+    p = Pool(parallelism)
     for trail_network_osm, loops in tqdm(result.loops.items()):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
@@ -64,11 +79,13 @@ def import_data(file: str, center, radius, parallelism, reset):
             n.save()
             Trailhead.objects.filter(node__osm_id=n.osm_id).delete()
             trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)
-            trailhead.save()
             trailheads[trailhead_osm.node.id] = trailhead
 
+        used_trailheads = {loop.start_node.id: trailheads[loop.start_node.id] for loop in loops}
+        tqdm.write(f'Used trailheads: {len(used_trailheads)}/{len(trailheads)}.')
+        for trailhead in used_trailheads.values():
+            trailhead.save()
         with_trailheads = [(loop, tn, trailheads[loop.start_node.id]) for loop in loops]
-        p = Pool(parallelism)
         routes = p.starmap(Route.from_subpath, with_trailheads)
         Route.objects.bulk_create(routes)
 

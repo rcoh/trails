@@ -1,3 +1,4 @@
+import hashlib
 import itertools
 import random
 from multiprocessing.pool import Pool
@@ -29,6 +30,10 @@ def drivable(way):
     # TODO: learn these features / rules engine?
     no_cars = way.tags.get("motor_vehicle") in ["no"]
     accessible = way.tags.get("access") in ["yes", "permissive", None]
+    explicitly_accessible = way.tags.get("access") in ["yes", "permissive"]
+    service_road = way.tags.get("highway") in INACCESSIBLE
+    if service_road and not explicitly_accessible:
+        return False
     return not is_trail(way) and accessible and not no_cars
 
 class LocationFilter(NamedTuple):
@@ -38,6 +43,9 @@ class LocationFilter(NamedTuple):
 
     def tup(self):
         return (self.lat, self.lon)
+
+    def digest(self):
+        return hashlib.sha1(f'{self.lat}-{self.lon}-{self.radius_km}'.encode('ascii')).hexdigest()[:16]
 
 class OsmiumTrailLoader(o.SimpleHandler):
     def __init__(self, location_filter: Optional[LocationFilter]=None):
@@ -137,9 +145,8 @@ class OSMIngestor:
         before_trailheads = set(self.trailheads())
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         osm_loader.apply_file(str(filename), locations=True)
-        print(f'Before applying location filter: {len(osm_loader.trails)}')
-        trails = self.apply_location_filter(osm_loader.trails)
-        print(f'After applying location filter: {len(trails)}')
+        trails = osm_loader.trails
+        print(f'Importing {len(trails)} trails')
         self.trails.update(trails)
         self.non_trail_nodes.update(osm_loader.non_trail_nodes)
         self.add_trails_to_graph(trails.values())
@@ -250,6 +257,7 @@ def segment_trails(trails: List[Trail]):
     verify_identical_nodes(trails, flat_trails)
     return flat_trails
 
+SHORTEST_LOOP_KM = 3
 
 def find_loops_from_root(
     trail_network: TrailNetwork,
@@ -282,7 +290,7 @@ def find_loops_from_root(
                 if next_trail["trail"].id == path.trail_segments[-1].id and len(options) > 1:
                     continue
                 new_path = path.add_node(next_trail["trail"])
-                if new_path.is_complete():
+                if new_path.is_complete() and new_path.length_km > SHORTEST_LOOP_KM:
                     yield new_path
                 else:
                     final_paths.append(new_path)

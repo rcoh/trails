@@ -142,11 +142,14 @@ class Trailhead(NamedTuple):
 class TrailNetwork:
     def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]) -> None:
         self.graph = subgraph
-        self.trailheads: List[Trailhead] = [
+        max_trailheads = int(self.total_length_km()) // 2
+        raw_trailheads = [
             Trailhead(node, nontrail_nodeset[node.id])
             for node in subgraph.nodes
             if node.id in nontrail_nodeset
         ]
+        self.num_raw = len(raw_trailheads)
+        self.trailheads: List[Trailhead] = raw_trailheads[:max_trailheads]
 
     @memoize
     def total_length_km(self):

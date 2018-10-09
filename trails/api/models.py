@@ -1,4 +1,6 @@
+from django.contrib.gis.db.models.functions import Distance
 from django.contrib.gis.geos import Point, LineString
+from django.contrib.gis.measure import D
 from django.core.validators import validate_comma_separated_integer_list
 from django.contrib.gis.db import models
 
@@ -43,11 +45,14 @@ class Trailhead(models.Model):
     node = models.OneToOneField(Node, on_delete=models.CASCADE, unique=True)
     name = models.CharField(max_length=32)
 
+    def draw(self, gmap):
+        gmap.plot([self.node.lat, self.node.lat + 0.0001], [self.node.lon, self.node.lon + 0.0001], edge_width=5)
+
     @staticmethod
     def trailheads_near(pnt: Point, max_distance_km: float):
         return Trailhead.objects.filter(
-            node__point__distance_lte=(pnt, max_distance_km * 1000)
-        )
+            node__point__distance_lte=(pnt, D(m=max_distance_km * 1000))).annotate(
+            distance=Distance('node__point', pnt)).order_by('distance')
 
 
 class TravelCache(models.Model):
@@ -72,10 +77,10 @@ class Route(models.Model):
 
     @classmethod
     def from_subpath(
-        cls,
-        subpath: osm.model.Subpath,
-        trail_network: TrailNetwork,
-        trailhead: Trailhead,
+            cls,
+            subpath: osm.model.Subpath,
+            trail_network: TrailNetwork,
+            trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         return cls(

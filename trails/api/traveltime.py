@@ -44,8 +44,9 @@ def get_travel_times_cached(
 def get_travel_times(
     start_point: Point, target_locations: List[Trailhead], max_minutes=40
 ) -> Dict[Trailhead, int]:
+    max_locations = 2000
     locations = [dict(id="__start", coords=dict(lat=start_point.x, lng=start_point.y))]
-    for trailhead in target_locations:
+    for trailhead in target_locations[:max_locations]:
         locations.append(
             dict(
                 id=f"{trailhead.node.osm_id}",
@@ -75,6 +76,9 @@ def get_travel_times(
     print(resp_json)
     trailhead_map = {trailhead.node.osm_id: trailhead for trailhead in target_locations}
     ret = {}
+    if 'results' not in resp_json:
+        print(resp_json)
+        return ret
     for location in resp_json["results"][0]["locations"]:
         osm_id = int(location["id"])
         ret[trailhead_map[osm_id]] = location["properties"][0]["travel_time"]
