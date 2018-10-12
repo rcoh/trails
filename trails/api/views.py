@@ -244,7 +244,7 @@ def top_trails(request):
     routes, trailheads = find_loops(filter)
     return Response(
         RouteSerializer(
-            routes[:100], many=True, context=dict(trailheads=trailheads)
+            routes[:20], many=True, context=dict(trailheads=trailheads)
         ).data,
         status=200,
     )
