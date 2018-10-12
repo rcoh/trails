@@ -2,7 +2,6 @@ import datetime
 import sys
 from typing import List, Dict
 import requests
-import requests_cache
 from django.contrib.gis.geos import Point
 
 from api.models import Trailhead, TravelTime, TravelCache

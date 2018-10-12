@@ -27,6 +27,8 @@ spec:
         env:
         - name: SERVER
           value: trails-app
+        - name: ENV
+          value: 'prod'
 ---
 apiVersion: v1
 kind: Service
