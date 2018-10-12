@@ -1,32 +1,46 @@
+import datetime
+import json
 import multiprocessing
 import os
 import pickle
 import time
 from multiprocessing.pool import Pool
 from pathlib import Path
-from typing import Dict
 
 import djclick as click
 
 from api.models import TrailNetwork, Route, Trailhead, Node, TravelCache
-from osm.loader import OSMIngestor, IngestSettings, DefaultQualitySettings, LocationFilter, OsmiumTrailLoader
+from osm import util
+from osm.loader import (
+    OSMIngestor,
+    IngestSettings,
+    DefaultQualitySettings,
+    LocationFilter,
+)
 from tqdm import tqdm
 
 
-
 @click.command()
-@click.option("--parallelism", "-p", type=click.INT, default=multiprocessing.cpu_count())
-@click.option('--center', type=click.STRING)
-@click.option('--radius', type=click.INT)
-@click.option('--reset', type=click.BOOL, help='Delete all data before importing', default=False)
-@click.option('--pickle-dir', type=click.STRING, default='/trail-data/backups')
+@click.option(
+    "--parallelism", "-p", type=click.INT, default=multiprocessing.cpu_count()
+)
+@click.option("--center", type=click.STRING)
+@click.option("--radius", type=click.INT)
+@click.option(
+    "--reset", type=click.BOOL, help="Delete all data before importing", default=False
+)
+@click.option("--pickle-dir", type=click.STRING, default="/trail-data/backups")
+@click.option("--meta-dir", type=click.STRING, default="/trail-data/ingest-metadata")
+@click.option("--recompute-loops", type=click.BOOL, default=True)
 @click.argument("file", type=click.Path(exists=True))
-def import_data(file: str, center, radius, parallelism, reset, pickle_dir):
+def import_data(
+        file: str, center, radius, parallelism, reset, pickle_dir, recompute_loops, meta_dir
+):
     start_time = time.time()
     if center:
-        lat, lon = center.split(',')
+        lat, lon = center.split(",")
         if radius is None:
-            click.secho('Radius must be specified with lat/lon', fg='red')
+            click.secho("Radius must be specified with lat/lon", fg="red")
             exit(1)
         location_filter = LocationFilter(float(lat), float(lon), radius_km=radius)
     else:
@@ -37,23 +51,31 @@ def import_data(file: str, center, radius, parallelism, reset, pickle_dir):
         max_segments=300,
         max_concurrent=40,
         quality_settings=DefaultQualitySettings,
-        location_filter=location_filter
+        location_filter=location_filter,
     )
-
 
     path = Path(file)
     os.makedirs(pickle_dir, exist_ok=True)
+    loader = OSMIngestor(Settings)
     if location_filter:
-        backup_file = Path(pickle_dir) / f'{location_filter.digest()}-{path.name}.pickle'
+        ingest_id = f'{location_filter.digest()}-{path.name}'
     else:
-        backup_file = Path(pickle_dir) / f'{path.name}.pickle'
+        ingest_id = f'unfiltered-{path.name}'
+
+    backup_file = (Path(pickle_dir) / ingest_id).with_suffix('.pickle')
+
+    nested_meta_dir = Path(meta_dir) / ingest_id
+    os.makedirs(nested_meta_dir, exist_ok=True)
+    metadata_file = nested_meta_dir / f'{datetime.datetime.utcnow().isoformat()}.json'
     if backup_file.exists():
-        result = pickle.load(open(backup_file, 'rb'))
+        result = pickle.load(open(backup_file, "rb"))
+        if recompute_loops:
+            loader.recompute_loops(result, parallelism)
+            result = loader.result()
     else:
-        loader = OSMIngestor(Settings)
         loader.ingest_file(path, parallelism=parallelism)
         result = loader.result()
-        with open(backup_file, 'wb') as f:
+        with open(backup_file, "wb") as f:
             pickle.dump(result, f)
     ingest_time = time.time()
     click.secho(
@@ -66,28 +88,31 @@ def import_data(file: str, center, radius, parallelism, reset, pickle_dir):
         Route.objects.all().delete()
         TrailNetwork.objects.all().delete()
         Node.objects.all().delete()
-        TravelCache.objects.all().delete()
+    TravelCache.objects.all().delete()
 
-    trailheads: Dict[int, Trailhead] = {}
     p = Pool(parallelism)
-    for trail_network_osm, loops in tqdm(result.loops.items()):
+    metadata = {}
+    for trail_network_osm, trailhead_dict in tqdm(result.metaloops.items()):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
         tn.save()
-        for trailhead_osm in tqdm(trail_network_osm.trailheads, desc="Trailheads"):
+        routes_for_network = []
+        metadata[tn.unique_id] = {}
+        for trailhead_osm, trailhead_result in tqdm(trailhead_dict.items(), desc="Trailheads"):
             n = Node.from_osm_node(trailhead_osm.node)
             n.save()
             Trailhead.objects.filter(node__osm_id=n.osm_id).delete()
             trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)
-            trailheads[trailhead_osm.node.id] = trailhead
+            if trailhead_result.loops:
+                trailhead.save()
+                routes_for_network += [(loop, tn, trailhead) for loop in trailhead_result.loops]
+            metadata[tn.unique_id][trailhead_osm.node.id] = trailhead_result.meta._asdict()
 
-        used_trailheads = {loop.start_node.id: trailheads[loop.start_node.id] for loop in loops}
-        tqdm.write(f'Used trailheads: {len(used_trailheads)}/{len(trailheads)}.')
-        for trailhead in used_trailheads.values():
-            trailhead.save()
-        with_trailheads = [(loop, tn, trailheads[loop.start_node.id]) for loop in loops]
-        routes = p.starmap(Route.from_subpath, with_trailheads)
+        routes = util.pmap(routes_for_network, Route.from_subpath, p)
         Route.objects.bulk_create(routes)
+
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f, indent=2)
 
     end_time = time.time()
     click.secho(

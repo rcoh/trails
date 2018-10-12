@@ -7,5 +7,5 @@ urlpatterns = [
     path("histogram/", views.histogram),
     path("trails/", views.top_trails),
     path("export/", views.export_gpx),
-    path("statusz", views.statusz)
+    path("statusz", views.statusz),
 ]

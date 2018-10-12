@@ -20,9 +20,22 @@ def test_subpath_similarity():
     # subpath_2 = Subpath([trail_1, trail_2])
     # assert subpath_1.similarity(subpath_2) == 1
 
-    assert Subpath.from_segments([trail_1, trail_2]).similarity(Subpath.from_segments([trail_2, trail_1])) == 1
-    assert Subpath.from_segments([trail_1]).similarity(Subpath.from_segments([trail_2])) == 0
-    assert Subpath.from_segments([trail_1, trail_3]).similarity(Subpath.from_segments([trail_1, trail_2])) == 0.5
+    assert (
+        Subpath.from_segments([trail_1, trail_2]).similarity(
+            Subpath.from_segments([trail_2, trail_1])
+        )
+        == 1
+    )
+    assert (
+        Subpath.from_segments([trail_1]).similarity(Subpath.from_segments([trail_2]))
+        == 0
+    )
+    assert (
+        Subpath.from_segments([trail_1, trail_3]).similarity(
+            Subpath.from_segments([trail_1, trail_2])
+        )
+        == 0.5
+    )
 
 
 def test_subpath_length():

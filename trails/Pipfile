@@ -23,8 +23,12 @@ djangorestframework-gis = "==0.13"
 Django = "==2.1.1"
 py-spy = "*"
 gpxpy = "*"
+black = "*"
 
 [dev-packages]
 
 [requires]
 python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true

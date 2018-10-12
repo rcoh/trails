@@ -1,4 +1,5 @@
 from functools import partial
+from multiprocessing.pool import Pool
 
 
 def verify_identical_nodes(trails_in, trails_out):
@@ -24,6 +25,13 @@ def window(iterable, size=2):
     for e in i:
         win = win[1:] + [e]
         yield win
+
+
+def pmap(iter, func, pool: Pool):
+    if pool._processes == 1:
+        map(func, iter)
+    else:
+        pool.starmap(func, iter)
 
 
 class memoize(object):

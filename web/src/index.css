@@ -4,6 +4,26 @@ body {
   font-family: sans-serif;
 }
 
+button {
+  margin: 5px;
+}
+
+.distance-input {
+  width: 2em;
+  margin-left: .5em;
+  margin-right: .5em;
+  text-align: center;
+}
+
+.btn {
+  margin: 5px;
+}
+
+.select-buttons {
+  /*display: flex;
+  justify-content: space-between;*/
+}
+
 /**
  * The geosuggest module
  * NOTE: duplicated font-sizes' are for browsers which don't support rem (only IE 8)

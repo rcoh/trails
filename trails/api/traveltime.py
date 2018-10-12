@@ -10,21 +10,42 @@ URL = "https://api.traveltimeapp.com/v4/time-filter"
 API_KEY = "826197ad401f526445650d96aaad63b0"
 APP_ID = "92be8391"
 
+UNREACHABLE = -1
 
 def get_travel_times_cached(
-    start_point: Point, target_locations: List[Trailhead], max_minutes=40
+    start_point: Point,
+    target_locations: List[Trailhead],
+    max_minutes=40,
+    force_no_cache=False,
 ) -> Dict[Trailhead, int]:
     cached_results = TravelCache.objects.filter(
         start_point__distance_lte=(start_point, 1000)
     )
-    if cached_results:
+    if cached_results and not force_no_cache:
         points = TravelTime.objects.filter(start_point=cached_results[0])
+        points_map = {point.osm_id: point.travel_time_minutes for point in points}
         trailhead_map = {
             trailhead.node.osm_id: trailhead for trailhead in target_locations
         }
-        return {
-            trailhead_map[point.osm_id]: point.travel_time_minutes for point in points
+        missing_points = trailhead_map.keys() - points_map.keys()
+        if missing_points:
+            results_from_api = get_travel_times_cached(
+                start_point,
+                [trailhead_map[t] for t in missing_points],
+                max_minutes,
+                force_no_cache=True,
+            )
+        else:
+            results_from_api = {}
+
+        results = {
+            trailhead: points_map.get(
+                trailhead.node.osm_id, results_from_api.get(trailhead)
+            )
+            for trailhead in target_locations
+            if trailhead in results_from_api or trailhead.node.osm_id in points_map
         }
+        return {k: time for k,time in results.items() if time != UNREACHABLE}
     else:
         results = get_travel_times(start_point, target_locations, max_minutes)
         cache_row = TravelCache(start_point=start_point)
@@ -73,13 +94,15 @@ def get_travel_times(
         URL, json=req, headers={"X-Application-Id": APP_ID, "X-Api-Key": API_KEY}
     )
     resp_json = resp.json()
-    print(resp_json)
     trailhead_map = {trailhead.node.osm_id: trailhead for trailhead in target_locations}
     ret = {}
-    if 'results' not in resp_json:
-        print(resp_json)
+    if "results" not in resp_json:
         return ret
     for location in resp_json["results"][0]["locations"]:
         osm_id = int(location["id"])
         ret[trailhead_map[osm_id]] = location["properties"][0]["travel_time"]
+    for location in resp_json["results"][0]['unreachable']:
+        osm_id = int(location)
+        ret[trailhead_map[osm_id]] = UNREACHABLE
+
     return ret

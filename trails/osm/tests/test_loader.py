@@ -12,6 +12,8 @@ from osm.loader import (
     find_loops_from_root,
     IngestSettings,
     DefaultQualitySettings,
+    filter_similar,
+    proc_network,
 )
 from osm.model import Subpath, Trail, Node, ElevationChange
 
@@ -108,35 +110,67 @@ def test_trail_network(test_data, huddart_trails):
     # highway=steps
     assert 462124623 not in trailhead_ids
 
+
 def test_sidewalk_filter(test_data):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "sidewalks.osm")
     networks = list(ingestor.trail_networks())
     assert len(networks) == 0
 
+
 def test_trailhead_cap(test_data):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "gg-park.osm")
     networks = list(ingestor.trail_networks())
-    import pdb; pdb.set_trace()
-    assert len(networks) == 0
 
 
 def test_loop_finder(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "huddart.osm")
-    subpaths = [
-        subpath for tn, subpaths in ingestor.loops.items() for subpath in subpaths
-    ]
-    quality = sum([subpath.quality() for subpath in subpaths]) / len(subpaths)
-    assert quality > 0.90
+    trailhead_map = [
+        trailhead_map for tn, trailhead_map in ingestor.trailnetwork_results.items()
+    ][0]
+    metas = [(trailhead, t.meta) for trailhead, t  in trailhead_map.items()]
+    for (trailhead, meta) in metas:
+        if meta.num_loops > 0:
+            assert meta.loop_quality > 0.7, trailhead
+
+
+def test_eaton_loop(test_data):
+    ingestor = OSMIngestor(TestSettings)
+    ingestor.ingest_file(test_data / "eaton-big-canyon.osm")
+    eaton_network = ingestor.result().trail_networks[0]
+    tramanto = [t for t in eaton_network.trailheads if t.name == "Tramanto Drive"][0]
+    Settings = IngestSettings(
+        max_distance_km=50,
+        max_segments=300,
+        max_concurrent=10,
+        quality_settings=DefaultQualitySettings,
+        location_filter=None,
+    )
+    _, results = proc_network((eaton_network, Settings))
+
+    # subpaths = trail_result.loops
+    # assert len(subpaths) >= 1
+    # longest = sorted(subpaths, key=lambda p: p.length_km)[-1]
+    # assert longest.length_km > 6
+
+
+def test_pulgas(test_data):
+    ingestor = OSMIngestor(TestSettings)
+    ingestor.ingest_file(test_data / "pulgas.osm")
+    pulgas_network = ingestor.result().trail_networks[0]
+    trailhead_ids = [trailhead.node.id for trailhead in pulgas_network.trailheads]
+    assert 1231648227 in trailhead_ids
+    assert len(ingestor.result().loops) > 0
+
 
 def dont_test_elevation_change():
-    home = Node(id=0, lat=37.47463,lon=-122.23131)
+    home = Node(id=0, lat=37.47463, lon=-122.23131)
     assert home.elevation() == 7
     windy_hill = Node(id=1, lat=37.3646627, lon=-122.246078)
     assert windy_hill.elevation() == 575
 
-    assert ElevationChange.from_nodes([home, home, windy_hill, windy_hill, home]) == ElevationChange(gain=568, loss=568)
-
-
+    assert ElevationChange.from_nodes(
+        [home, home, windy_hill, windy_hill, home]
+    ) == ElevationChange(gain=568, loss=568)

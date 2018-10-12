@@ -46,13 +46,21 @@ class Trailhead(models.Model):
     name = models.CharField(max_length=32)
 
     def draw(self, gmap):
-        gmap.plot([self.node.lat, self.node.lat + 0.0001], [self.node.lon, self.node.lon + 0.0001], edge_width=5)
+        gmap.plot(
+            [self.node.lat, self.node.lat + 0.0001],
+            [self.node.lon, self.node.lon + 0.0001],
+            edge_width=5,
+        )
 
     @staticmethod
     def trailheads_near(pnt: Point, max_distance_km: float):
-        return Trailhead.objects.filter(
-            node__point__distance_lte=(pnt, D(m=max_distance_km * 1000))).annotate(
-            distance=Distance('node__point', pnt)).order_by('distance')
+        return (
+            Trailhead.objects.filter(
+                node__point__distance_lte=(pnt, D(m=max_distance_km * 1000))
+            )
+            .annotate(distance=Distance("node__point", pnt))
+            .order_by("distance")
+        )
 
 
 class TravelCache(models.Model):
@@ -77,10 +85,10 @@ class Route(models.Model):
 
     @classmethod
     def from_subpath(
-            cls,
-            subpath: osm.model.Subpath,
-            trail_network: TrailNetwork,
-            trailhead: Trailhead,
+        cls,
+        subpath: osm.model.Subpath,
+        trail_network: TrailNetwork,
+        trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         return cls(

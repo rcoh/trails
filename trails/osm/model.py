@@ -22,7 +22,7 @@ class Node(NamedTuple):
     def elevation(self):
         return elevation.get_elevation(self.lat, self.lon)
 
-    def distance(self, other: 'Node'):
+    def distance(self, other: "Node"):
         return geopy.distance.great_circle((self.lat, self.lon), (other.lat, other.lon))
 
 
@@ -44,7 +44,9 @@ class ElevationChange(NamedTuple):
 
         # Create points:
         for node in nodes:
-            gpx_segment.points.append(gpxpy.gpx.GPXTrackPoint(latitude=node.lat, longitude=node.lon))
+            gpx_segment.points.append(
+                gpxpy.gpx.GPXTrackPoint(latitude=node.lat, longitude=node.lon)
+            )
 
         elevation.add_elevations(gpx, smooth=True)
         (gain, loss) = gpx_segment.get_uphill_downhill()
@@ -55,12 +57,11 @@ trail_length_cache = {}
 
 
 class Trail:
-    def __init__(self, nodes, way_id, name, derived_id=None, reversed=False):
+    def __init__(self, nodes, way_id, name, derived_id=None):
         self.nodes = nodes
         self.way_id: str = way_id
         self.id = derived_id or way_id
         self.name = name
-        self.reversed = reversed
 
     @memoize
     def length(self):
@@ -88,7 +89,7 @@ class Trail:
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx: idx + 1]
+            new_nodes = self.nodes[start_idx : idx + 1]
             new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
             result.append(
                 Trail(
@@ -228,16 +229,18 @@ class Subpath:
 
     def is_pure_out_and_back(self):
         ts_ids = [ts.id for ts in self.trail_segments]
-        return ts_ids == ts_ids[::-1]
+        return ts_ids == ts_ids[::-1] and self.quality() > 0.49
 
     @memoize
     def quality(self, repeat_weight=1):
         if self.length_km == 0:
             return 1
         repeat_quality = self.unique_length / self.length_km
-        if self.num_spurs() > 1:
-            return 0
-        return repeat_quality * repeat_weight
+        assert repeat_weight <= 1
+        spur_quality = self.num_spurs() * -0.1
+        q = repeat_quality * repeat_weight + spur_quality
+        assert q <= 1
+        return max(q, 0)
 
     @classmethod
     def from_startnode(cls, starting_node: Node):
@@ -255,6 +258,7 @@ class Subpath:
             if t1.id == t2.id:
                 n += 1
         return n
+
     def add_node(self, trail_segment: Trail):
         current_final = self.last_node()
         if trail_segment.nodes[0] == current_final:
@@ -267,8 +271,11 @@ class Subpath:
         else:
             unique_length = 0
 
-        return Subpath(list(self.trail_segments) + [new_segment], length_km=self.length_km + new_segment.length().km,
-                       unique_length=self.unique_length + unique_length)
+        return Subpath(
+            list(self.trail_segments) + [new_segment],
+            length_km=self.length_km + new_segment.length().km,
+            unique_length=self.unique_length + unique_length,
+        )
 
     def nodes(self) -> Iterator[Node]:
         for seg in self.trail_segments:
@@ -285,6 +292,9 @@ class Subpath:
     @memoize
     def elevation_change(self) -> ElevationChange:
         return ElevationChange.from_nodes(self.nodes())
+
+    def first_node(self):
+        return self.trail_segments[0].nodes[0]
 
     def last_node(self):
         return self.trail_segments[-1].nodes[-1]

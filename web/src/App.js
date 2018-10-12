@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { compose, withProps, lifecycle } from "recompose";
 import PropTypes from "prop-types";
-import logo from "./logo.svg";
+import { Button } from 'reactstrap';
 import ReactTable from "react-table";
 import "react-table/react-table.css";
 import "./App.css";
@@ -75,18 +75,18 @@ class App extends Component {
       );
     }
     return (
-      <div className="App">
+      <div className="App container">
         <div>
           Starting from: <Geosuggest onSuggestSelect={this.onSuggestSelect} />
         </div>
         I want to hike/run about
         <input
-          type="number"
+          className="distance-input"
           value={this.state.distance}
           onChange={this.updateDistance}
         />
         kilometers
-        <button onClick={this.loadHistogram}>Go</button>
+        <Button color="primary" onClick={this.loadHistogram}>Go</Button>
         {histogram}
         {results}
       </div>
@@ -169,17 +169,17 @@ class ResultHistogram extends Component {
 
     //<SliderT min={this.props.elevation.min} max={this.props.elevation.max} style={sliderStyle} marks={marks}/>
     return (
-      <div>
-        <button onClick={() => this.props.select(minimizeElevation)}>
-          Minimize elevation ({this.props.elevation.min} meters)
-        </button>
-        <button onClick={() => this.props.select(maximizeElevation)}>
-          Maximize elevation ({this.props.elevation.max} meters)
-        </button>
-        <button onClick={() => this.props.select(minimizeTravelTime)}>
-          Minimize travel time ({Math.round(this.props.travel_time.min / 60)}{" "}
+      <div class="select-buttons">
+        <Button color="success" onClick={() => this.props.select(minimizeElevation)}>
+          Flatest ({this.props.elevation.min.toFixed(0)} meters)
+        </Button>
+        <Button color="success" onClick={() => this.props.select(maximizeElevation)}>
+          Hilliest ({this.props.elevation.max.toFixed(0)} meters)
+        </Button>
+        <Button color="success" onClick={() => this.props.select(minimizeTravelTime)}>
+          Minimize drive time ({(this.props.travel_time.min / 60).toFixed(0)}{" "}
           minutes)
-        </button>
+        </Button>
       </div>
     );
   }
@@ -218,7 +218,7 @@ class ResultTable extends Component {
       Cell: props => props.value.toFixed(0)
     },
     {
-      Header: "Travel Time (minutes)",
+      Header: "Drive Time (minutes)",
       accessor: "travel_time"
     },
     {
@@ -301,7 +301,7 @@ const TrailMap = compose(
           const point = { lat, lng: lon };
           bounds.extend(point);
         });
-        this.state.mapRef.fitBounds(bounds);
+        window.setTimeout(() => this.state.mapRef.fitBounds(bounds), 100);
       }
     }
   }),

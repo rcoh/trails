@@ -14,10 +14,12 @@ class NodeListSerializer(serializers.Serializer):
     def to_representation(self, instance):
         return [{"lat": lat, "lon": lon} for (lat, lon) in instance]
 
+
 class NodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Node
         fields = ("osm_id", "lat", "lon")
+
 
 class TrailheadSerializer(serializers.ModelSerializer):
     node = NodeSerializer()
@@ -25,6 +27,7 @@ class TrailheadSerializer(serializers.ModelSerializer):
     class Meta:
         model = Trailhead
         fields = ("name", "id", "node")
+
 
 class RouteSerializer(serializers.ModelSerializer):
     nodes = NodeListSerializer()
@@ -47,11 +50,6 @@ class RouteSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         base = super().to_representation(instance)
         return {
-            'travel_time': int(self.context['trailheads'][instance.trailhead] / 60),
+            "travel_time": int(self.context["trailheads"][instance.trailhead] / 60),
             **base,
         }
-
-
-
-
-
