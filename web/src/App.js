@@ -177,7 +177,7 @@ class ResultHistogram extends Component {
           Hilliest ({this.props.elevation.max.toFixed(0)} meters)
         </Button>
         <Button color="success" onClick={() => this.props.select(minimizeTravelTime)}>
-          Minimize drive time ({(this.props.travel_time.min / 60).toFixed(0)}{" "}
+          Closest ({(this.props.travel_time.min / 60).toFixed(0)}{" "}
           minutes)
         </Button>
       </div>
