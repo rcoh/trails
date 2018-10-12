@@ -1,4 +1,5 @@
 import datetime
+import sys
 from typing import List, Dict
 import requests
 import requests_cache
@@ -10,7 +11,7 @@ URL = "https://api.traveltimeapp.com/v4/time-filter"
 API_KEY = "826197ad401f526445650d96aaad63b0"
 APP_ID = "92be8391"
 
-UNREACHABLE = -1
+UNREACHABLE = sys.maxsize
 
 def get_travel_times_cached(
     start_point: Point,
