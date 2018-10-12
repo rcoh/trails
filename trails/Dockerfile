@@ -12,8 +12,8 @@ RUN rm /usr/lib/x86_64-linux-gnu/libboost_python.so
 RUN ln -s /usr/lib/x86_64-linux-gnu/libboost_python-py35.so /usr/lib/x86_64-linux-gnu/libboost_python.so
 RUN pip install pipenv
 COPY Pipfile /app/
-RUN pip install SRTM.py
 RUN pipenv install --pre
+RUN pipenv run pip install SRTM.py
 COPY . /app/
 EXPOSE 8000
 CMD ["pipenv", "run", "python", "manage.py", "runserver", "0.0.0.0:8000"]

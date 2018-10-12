@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trails-web
+  labels:
+    app: trails-web
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trails-web
+  template:
+    metadata:
+      labels:
+        app: trails-web
+    spec:
+      containers:
+      - name: trails-web
+        image: gcr.io/trailfinder-1536773117692/trails-web
+        ports:
+        - containerPort: 80
+---
+kind: Service
+apiVersion: v1
+metadata:
+  name: trails-web-service
+spec:
+  type: NodePort
+  selector:
+    app: trails-web
+  ports:
+  - protocol: TCP
+    port: 80
+    targetPort: 80
+

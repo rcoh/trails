@@ -1,0 +1,44 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trails-app
+  labels:
+    app: trails-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: trails-app
+  template:
+    metadata:
+      labels:
+        app: trails-app
+    spec:
+      containers:
+      - name: trails-app
+        image: gcr.io/trailfinder-1536773117692/trails-app
+        ports:
+        - containerPort: 8000
+        readinessProbe:
+          httpGet:
+            path: /api/statusz
+            port: 8000
+            scheme: HTTP
+        env:
+        - name: SERVER
+          value: trails-app
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trails-app-service
+  labels:
+    app: trails-app
+spec:
+  type: NodePort
+  ports:
+  - port: 80
+    targetPort: 8000
+    protocol: TCP
+  selector:
+    app: trails-app
