@@ -131,9 +131,7 @@ def proc_network(args):
             find_loops_from_root(
                 network,
                 trailhead.node,
-                max_distance_km=settings.max_distance_km,
-                max_concurrent=settings.max_concurrent,
-                max_segments=settings.max_segments,
+                settings
             )
         )
         new_loops = sorted(new_loops, key=lambda l: -1 * l.quality())
@@ -185,6 +183,7 @@ class IngestSettings(NamedTuple):
     max_segments: int
     quality_settings: QualitySettings
     location_filter: Optional[LocationFilter] = None
+    trailhead_distance_threshold_m: int = 300
 
 
 DefaultQualitySettings = QualitySettings(repeat_node_weight=1)
@@ -208,10 +207,11 @@ class OSMIngestor:
         self.trailnetwork_results: Dict[TrailNetwork, Dict[Trailhead, TrailheadResult]] = {}
 
     def recompute_loops(self, results: OsmLoadResult, parallelism: int):
-        networks_to_process = [
+        # process the biggest networks first to take advantage of parallelism
+        networks_to_process = sorted([
             (network, self.ingest_settings)
             for network in results.trail_networks
-        ]
+        ], key=lambda network: -1*network.total_length_km())
 
         if parallelism > 1:
             p = Pool(parallelism)
@@ -297,7 +297,7 @@ class OSMIngestor:
         G = self.global_graph
         for c in nx.connected_components(G):
             subgraph = G.subgraph(c).copy()
-            network = TrailNetwork(subgraph, self.non_trail_nodes)
+            network = TrailNetwork(subgraph, self.non_trail_nodes, self.ingest_settings.trailhead_distance_threshold_m)
             if network.total_length_km() > 5:
                 yield network
 
@@ -333,14 +333,17 @@ SHORTEST_LOOP_KM = 3
 
 def find_loops_from_root(
         trail_network: TrailNetwork,
-        root,
-        max_segments=30,
-        max_distance_km=10,
-        max_concurrent=1000,
+        root: Node,
+        settings: IngestSettings,
 ):
+    max_segments = settings.max_segments
+    max_distance_km = settings.max_distance_km
+    max_concurrent = settings.max_concurrent
+
     random.seed(735)
     subgraph = trail_network.graph
     num_edges = len(subgraph.edges)
+
     max_segments = min(num_edges * 1.5, max_segments)
     max_distance_km = min(max_distance_km, trail_network.total_length_km() * 1.1)
     active_paths = [Subpath.from_startnode(root)]

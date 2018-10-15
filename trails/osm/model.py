@@ -1,7 +1,7 @@
 import random
 from collections import defaultdict, Counter
 from functools import reduce
-from typing import NamedTuple, List, Set, Iterator, Dict
+from typing import NamedTuple, List, Set, Iterator, Dict, Optional
 
 import geopy.distance
 import srtm
@@ -57,7 +57,7 @@ trail_length_cache = {}
 
 
 class Trail:
-    def __init__(self, nodes, way_id, name, derived_id=None):
+    def __init__(self, nodes, way_id, name: Optional[str], derived_id=None):
         self.nodes = nodes
         self.way_id: str = way_id
         self.id = derived_id or way_id
@@ -82,7 +82,7 @@ class Trail:
         if way.tags.get("name"):
             name = way.tags["name"]
         else:
-            name = "unamed"
+            name = None
         return cls(nodes=nodes, way_id=id, name=name)
 
     def split_at(self, idxs):
@@ -141,7 +141,7 @@ class Trailhead(NamedTuple):
 
 
 class TrailNetwork:
-    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str]) -> None:
+    def __init__(self, subgraph: SubGraph, nontrail_nodeset: Dict[int, str], distance_threshold_m: int) -> None:
         self.graph = subgraph
         max_trailheads = int(self.total_length_km()) // 2
         raw_trailheads = [
@@ -150,7 +150,20 @@ class TrailNetwork:
             if node.id in nontrail_nodeset
         ]
         self.num_raw = len(raw_trailheads)
+        raw_trailheads = self.cluster_trailheads(raw_trailheads, distance_threshold_m)
+        self.num_clustered = len(raw_trailheads)
         self.trailheads: List[Trailhead] = raw_trailheads[:max_trailheads]
+
+    def cluster_trailheads(self, trailheads, distance_threshold_m):
+        if not trailheads:
+            return []
+        trailheads_to_keep = [trailheads[0]]
+        for trailhead in trailheads[1:]:
+            closest = min([trailhead.node.distance(existing.node) for existing in trailheads_to_keep])
+            if closest.m > distance_threshold_m:
+                trailheads_to_keep.append(trailhead)
+        return trailheads_to_keep
+
 
     @memoize
     def total_length_km(self):
@@ -202,13 +215,32 @@ class Subpath:
         self.start_node = segments[0].nodes[0]
         self.trail_segments = segments
         self.segment_dist = Counter()
+        self.intersection_tracker = Counter()
         for s in self.trail_segments:
             self.segment_dist.update({s.id: s.length().km})
+            # explicitly only record the start node so we don't double count
+            self.record_node(s.nodes[0])
 
         self.length_km = length_km
         self.unique_length = unique_length
 
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
+
+    def record_node(self, node: Node):
+        if node == self.first_node() or node == self.last_node():
+            return
+        self.intersection_tracker.update({node.id})
+
+    def name(self):
+        trail_names = []
+        for segment in self.trail_segments:
+            if segment.name is not None and self.segment_dist[segment.id] > self.length_km / 3:
+                if segment.name not in trail_names:
+                    trail_names.append(segment.name)
+
+        return '-'.join(trail_names)
+
+
 
     @classmethod
     def from_segments(cls, segments: List[Trail]):
@@ -233,12 +265,19 @@ class Subpath:
 
     @memoize
     def quality(self, repeat_weight=1):
+
         if self.length_km == 0:
             return 1
+
         repeat_quality = self.unique_length / self.length_km
         assert repeat_weight <= 1
+
         spur_quality = self.num_spurs() * -0.1
-        q = repeat_quality * repeat_weight + spur_quality
+
+        graph_complexity = sum([-.1 for v in self.intersection_tracker.values() if v >= 3])
+
+
+        q = repeat_quality * repeat_weight + spur_quality + graph_complexity
         assert q <= 1
         return max(q, 0)
 

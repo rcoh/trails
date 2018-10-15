@@ -32,9 +32,10 @@ from tqdm import tqdm
 @click.option("--pickle-dir", type=click.STRING, default="/trail-data/backups")
 @click.option("--meta-dir", type=click.STRING, default="/trail-data/ingest-metadata")
 @click.option("--recompute-loops", type=click.BOOL, default=True)
+@click.option('--no-cache', type=click.BOOL, default=False)
 @click.argument("file", type=click.Path(exists=True))
 def import_data(
-        file: str, center, radius, parallelism, reset, pickle_dir, recompute_loops, meta_dir
+        file: str, center, radius, parallelism, reset, pickle_dir, recompute_loops, meta_dir, no_cache
 ):
     start_time = time.time()
     if center:
@@ -67,7 +68,7 @@ def import_data(
     nested_meta_dir = Path(meta_dir) / ingest_id
     os.makedirs(nested_meta_dir, exist_ok=True)
     metadata_file = nested_meta_dir / f'{datetime.datetime.utcnow().isoformat()}.json'
-    if backup_file.exists():
+    if backup_file.exists() and not no_cache:
         result = pickle.load(open(backup_file, "rb"))
         if recompute_loops:
             loader.recompute_loops(result, parallelism)
@@ -109,6 +110,7 @@ def import_data(
             metadata[tn.unique_id][trailhead_osm.node.id] = trailhead_result.meta._asdict()
 
         routes = util.pmap(routes_for_network, Route.from_subpath, p)
+        print(f'Creating routes {len(routes)}')
         Route.objects.bulk_create(routes)
 
     with open(metadata_file, 'w') as f:

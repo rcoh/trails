@@ -117,7 +117,7 @@ class GeneralRequest(serializers.Serializer):
 
 
 def trailheads_near(
-    filter: TrailheadFilter, length: Optional[Tolerance]
+        filter: TrailheadFilter, length: Optional[Tolerance]
 ) -> Dict[Trailhead, int]:
     possible_trailheads = Trailhead.trailheads_near(
         filter.location, max_distance_km=filter.distance_km_filter
@@ -164,8 +164,8 @@ def find_loops(filter: GeneralFilter):
     if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
-            .extra(select={"delta_len": f"abs(length_km-{filter.length_filter.value})"})
-            .order_by("delta_len")[:5]
+                .extra(select={"delta_len": f"abs(length_km-{filter.length_filter.value})"})
+                .order_by("delta_len")[:5]
         )
         filtered = Route.objects.filter(id__in=closest_matches)
     if filter.ordering is not None:
@@ -185,23 +185,26 @@ def histogram(request):
         route.trailhead: possible_trailheads[route.trailhead] for route in routes
     }
 
-    ret = {
-        "num_routes": len(routes),
-        "num_trailheads": len(actual_trailheads),
-        "elevation": {
-            "max": max([route.elevation_gain for route in routes]),
-            "min": min([route.elevation_gain for route in routes]),
-        },
-        "travel_time": {
-            "max": max(actual_trailheads.values()),
-            "min": min(actual_trailheads.values()),
-        },
-        "distance": {
-            "max": max(route.length_km for route in routes),
-            "min": min(route.length_km for route in routes),
-        },
-        "elevations": [route.elevation_gain for route in routes],
-    }
+    if routes:
+        ret = {
+            "num_routes": len(routes),
+            "num_trailheads": len(actual_trailheads),
+            "elevation": {
+                "max": max([route.elevation_gain for route in routes]),
+                "min": min([route.elevation_gain for route in routes]),
+            },
+            "travel_time": {
+                "max": max(actual_trailheads.values()),
+                "min": min(actual_trailheads.values()),
+            },
+            "distance": {
+                "max": max(route.length_km for route in routes),
+                "min": min(route.length_km for route in routes),
+            },
+            "elevations": [route.elevation_gain for route in routes],
+        }
+    else:
+        ret = {"num_routes": 0}
     return Response(ret, status=200)
 
 

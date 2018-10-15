@@ -82,6 +82,7 @@ class Route(models.Model):
     nodes = models.LineStringField()
     trailhead = models.ForeignKey(Trailhead, db_index=True, on_delete=models.CASCADE)
     quality = models.FloatField()
+    name = models.CharField(max_length=64, default='')
 
     @classmethod
     def from_subpath(

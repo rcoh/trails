@@ -29,9 +29,9 @@ def window(iterable, size=2):
 
 def pmap(iter, func, pool: Pool):
     if pool._processes == 1:
-        map(func, iter)
+        return map(func, iter)
     else:
-        pool.starmap(func, iter)
+        return pool.starmap(func, iter)
 
 
 class memoize(object):

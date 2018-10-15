@@ -1,21 +1,17 @@
 from pathlib import Path
-from unittest.mock import MagicMock
 
 import pytest
-from geopy.distance import Distance
 from gmplot import gmplot
 from pytest import fixture
 
 from osm.loader import (
     OsmiumTrailLoader,
     OSMIngestor,
-    find_loops_from_root,
     IngestSettings,
     DefaultQualitySettings,
-    filter_similar,
     proc_network,
 )
-from osm.model import Subpath, Trail, Node, ElevationChange
+from osm.model import Node, ElevationChange
 
 
 @fixture
@@ -74,11 +70,13 @@ TestSettings = IngestSettings(
     max_segments=20,
     max_distance_km=20,
     max_concurrent=10,
+    trailhead_distance_threshold_m=300,
     quality_settings=DefaultQualitySettings,
 )
 
 
 def test_trail_network(test_data, huddart_trails):
+
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "huddart.osm")
     networks = list(ingestor.trail_networks())
@@ -122,6 +120,8 @@ def test_trailhead_cap(test_data):
     ingestor = OSMIngestor(TestSettings)
     ingestor.ingest_file(test_data / "gg-park.osm")
     networks = list(ingestor.trail_networks())
+    assert networks[0].num_clustered < 20
+    assert len(networks[0].trailheads) < 20
 
 
 def test_loop_finder(test_data, huddart_trails):

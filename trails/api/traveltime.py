@@ -45,7 +45,7 @@ def get_travel_times_cached(
             for trailhead in target_locations
             if trailhead in results_from_api or trailhead.node.osm_id in points_map
         }
-        return {k: time for k,time in results.items() if time != UNREACHABLE}
+        return {k: time for k,time in results.items() if time < max_minutes*60}
     else:
         results = get_travel_times(start_point, target_locations, max_minutes)
         cache_row = TravelCache(start_point=start_point)
@@ -59,7 +59,7 @@ def get_travel_times_cached(
             for trailhead, time in results.items()
         ]
         TravelTime.objects.bulk_create(travel_time_objects)
-        return results
+        return {k: time for k,time in results.items() if time < max_minutes*60}
 
 
 def get_travel_times(
