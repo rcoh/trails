@@ -19,6 +19,11 @@ spec:
         image: gcr.io/trailfinder-1536773117692/trails-web
         ports:
         - containerPort: 80
+        resources:
+          limits:
+            cpu: 20m
+          requests:
+            cpu: 10m
 ---
 kind: Service
 apiVersion: v1

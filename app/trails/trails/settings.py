@@ -16,6 +16,7 @@ IS_PROD = os.environ.get('ENV') == 'prod'
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_DIR = '/db/'
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -30,10 +31,10 @@ DEBUG = not IS_PROD
 ALLOWED_HOSTS = ["*"]
 
 if IS_PROD:
-    SECURE_HSTS_SECONDS = 600
-    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    SECURE_SSL_REDIRECT = True
-    SECURE_HSTS_PRELOAD = True
+    # SECURE_HSTS_SECONDS = 600
+    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    # SECURE_SSL_REDIRECT = True
+    # SECURE_HSTS_PRELOAD = True
     SECURE_CONTENT_TYPE_NOSNIFF = True
     SECURE_BROWSER_XSS_FILTER = True
     SESSION_COOKIE_SECURE = True
@@ -103,7 +104,7 @@ SPATIALITE_LIBRARY_PATH = "mod_spatialite.so"
 DATABASES = {
     "default": {
         "ENGINE": "django.contrib.gis.db.backends.spatialite",
-        "NAME": os.path.join(BASE_DIR, "db.sqlite3"),
+        "NAME": os.path.join(DB_DIR, "db.sqlite3"),
     }
 }
 

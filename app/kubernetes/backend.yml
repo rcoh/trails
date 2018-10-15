@@ -17,6 +17,11 @@ spec:
       containers:
       - name: trails-app
         image: gcr.io/trailfinder-1536773117692/trails-app
+        resources:
+          limits:
+            cpu: 100m
+          requests:
+            cpu: 50m
         ports:
         - containerPort: 8000
         readinessProbe:
@@ -28,7 +33,7 @@ spec:
         - name: SERVER
           value: trails-app
         - name: ENV
-          value: 'prod'
+          value: 'dev'
 ---
 apiVersion: v1
 kind: Service

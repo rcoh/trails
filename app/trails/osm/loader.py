@@ -211,7 +211,7 @@ class OSMIngestor:
         networks_to_process = sorted([
             (network, self.ingest_settings)
             for network in results.trail_networks
-        ], key=lambda network: -1*network.total_length_km())
+        ], key=lambda net_set: -1*net_set[0].total_length_km())
 
         if parallelism > 1:
             p = Pool(parallelism)
