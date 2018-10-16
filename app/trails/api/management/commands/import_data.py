@@ -93,6 +93,8 @@ def import_data(
 
     p = Pool(parallelism)
     metadata = {}
+    routes_import = 0
+    trailheads_imported = 0
     for trail_network_osm, trailhead_dict in tqdm(result.metaloops.items()):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
@@ -105,6 +107,7 @@ def import_data(
             Trailhead.objects.filter(node__osm_id=n.osm_id).delete()
             trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name)
             if trailhead_result.loops:
+                trailheads_imported += 1
                 trailhead.save()
                 routes_for_network += [(loop, tn, trailhead) for loop in trailhead_result.loops]
             metadata[tn.unique_id][trailhead_osm.node.id] = trailhead_result.meta._asdict()
@@ -112,11 +115,12 @@ def import_data(
         routes = util.pmap(routes_for_network, Route.from_subpath, p)
         print(f'Creating routes {len(routes)}')
         Route.objects.bulk_create(routes)
+        routes_import += len(routes)
 
     with open(metadata_file, 'w') as f:
         json.dump(metadata, f, indent=2)
 
     end_time = time.time()
     click.secho(
-        f"{Route.objects.count()}/{TrailNetwork.objects.count()}/{Trailhead.objects.count()} objects imported in {(end_time-start_time)} seconds"
+        f"{routes_import}/{TrailNetwork.objects.count()}/{trailheads_imported} objects imported in {(end_time-start_time)} seconds"
     )

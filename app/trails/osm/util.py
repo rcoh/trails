@@ -29,7 +29,9 @@ def window(iterable, size=2):
 
 def pmap(iter, func, pool: Pool):
     if pool._processes == 1:
-        return map(func, iter)
+        def splat(arg_tup):
+            return func(*arg_tup)
+        return list(map(splat, iter))
     else:
         return pool.starmap(func, iter)
 

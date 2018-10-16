@@ -47,7 +47,7 @@ def test_loader(huddart_trails):
         "Trail7",
         "Bay Area Ridge Trail",
         "Campground Trail",
-        "unamed",
+        None,
         "Purisima Creek Trail",
         "Redwood Trail",
         "Harkins Ridge Trail",

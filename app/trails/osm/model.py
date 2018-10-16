@@ -339,7 +339,7 @@ class Subpath:
         return self.trail_segments[-1].nodes[-1]
 
     def __repr__(self):
-        names = [seg.name for seg in self.trail_segments]
+        names = [seg.name or 'noname' for seg in self.trail_segments]
         if self.is_complete():
             names.append("fakeroot")
         return f'{self.length_km}: {"<->".join(names)}'

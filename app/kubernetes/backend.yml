@@ -18,8 +18,6 @@ spec:
       - name: trails-app
         image: gcr.io/trailfinder-1536773117692/trails-app
         resources:
-          limits:
-            cpu: 100m
           requests:
             cpu: 50m
         ports:
