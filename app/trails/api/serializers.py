@@ -1,5 +1,10 @@
+import copy
+from enum import Enum
+
+from measurement.measures import Distance
 from rest_framework import serializers
-from rest_framework_gis.serializers import GeoFeatureModelSerializer
+from rest_framework.fields import empty, _UnvalidatedField
+from rest_framework.serializers import ListSerializer
 
 from api.models import Route, Trailhead, Node
 
@@ -29,15 +34,87 @@ class TrailheadSerializer(serializers.ModelSerializer):
         fields = ("name", "id", "node")
 
 
+class Measurement(Enum):
+    Distance = 0
+    Height = 1
+
+    def build(self, unit_system: "UnitSystem", value: float):
+        if self == Measurement.Distance:
+            if unit_system == UnitSystem.Metric:
+                return Distance(km=value)
+            elif unit_system == UnitSystem.Imperial:
+                return Distance(mi=value)
+        elif self == Measurement.Height:
+            if unit_system == UnitSystem.Metric:
+                return Distance(m=value)
+            elif unit_system == UnitSystem.Imperial:
+                return Distance(ft=value)
+        raise Exception()
+
+
+class UnitSystem(Enum):
+    Metric = "metric"
+    Imperial = "imperial"
+
+
+class HeightSerialzer(serializers.Serializer):
+    def to_representation(self, instance):
+        if self.context["unit"] == UnitSystem.Metric:
+            return round(instance.m)
+        elif self.context["unit"] == UnitSystem.Imperial:
+            return round(instance.ft)
+        else:
+            raise Exception()
+
+
+class DistanceSerializer(serializers.Serializer):
+    def to_representation(self, instance):
+        if self.context["unit"] == UnitSystem.Metric:
+            return round(instance.km, 1)
+        elif self.context["unit"] == UnitSystem.Imperial:
+            return round(instance.mi, 1)
+        else:
+            raise Exception()
+
+
+class RangeField(serializers.Serializer):
+    min = _UnvalidatedField()
+    max = _UnvalidatedField()
+
+    def __init__(self, instance=None, data=empty, **kwargs):
+        child = kwargs.pop("child")
+        self.min = copy.deepcopy(child)
+        self.max = copy.deepcopy(child)
+        super().__init__(instance, data, **kwargs)
+        self.min.bind(field_name="min", parent=self)
+        self.max.bind(field_name="max", parent=self)
+
+    def to_representation(self, instance):
+        return {
+            "min": self.min.to_representation(instance["min"]),
+            "max": self.max.to_representation(instance["max"]),
+        }
+
+
+class HistogramSerializer(serializers.Serializer):
+    num_routes = serializers.IntegerField()
+    num_trailheads = serializers.IntegerField()
+    elevation = RangeField(child=HeightSerialzer())
+    distance = RangeField(child=DistanceSerializer())
+    elevations = ListSerializer(child=HeightSerialzer())
+
 class RouteSerializer(serializers.ModelSerializer):
     nodes = NodeListSerializer()
     trailhead = TrailheadSerializer()
+    length = DistanceSerializer()
+    elevation_gain = HeightSerialzer()
+    elevation_loss = HeightSerialzer()
 
     class Meta:
         model = Route
         fields = (
             "id",
-            "length_km",
+            "length",
             "trailhead",
             "trail_network",
             "elevation_gain",

@@ -7,7 +7,7 @@ from osm.model import Trail, Subpath
 
 def mock_trail(id, length):
     trail = Trail([MagicMock()], id, f"trail{id}")
-    trail.length = MagicMock(return_value=Distance(kilometers=length))
+    trail.length = MagicMock(return_value=Distance(meters=length))
     trail.reverse = MagicMock(return_value=trail)
     return trail
 
@@ -44,17 +44,17 @@ def test_subpath_length():
     trail_3 = mock_trail(3, 7)
 
     path = Subpath.from_segments([trail_1])
-    assert path.unique_length == 5
-    assert path.length_km == 5
+    assert path.unique_length_m == 5
+    assert path.length_m == 5
 
     path = path.add_node(trail_2)
-    assert path.unique_length == 11
-    assert path.length_km == 11
+    assert path.unique_length_m == 11
+    assert path.length_m == 11
 
     path = path.add_node(trail_1)
-    assert path.unique_length == 11
-    assert path.length_km == 16
+    assert path.unique_length_m == 11
+    assert path.length_m == 16
 
     path = path.add_node(trail_3)
-    assert path.unique_length == 18
-    assert path.length_km == 23
+    assert path.unique_length_m == 18
+    assert path.length_m == 23

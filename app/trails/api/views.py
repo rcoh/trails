@@ -1,16 +1,20 @@
-from io import StringIO
 from typing import Optional, NamedTuple, Dict
-from wsgiref.util import FileWrapper
 
-import gpxpy.gpx
 from django.contrib.gis.geos import Point
 from django.http import HttpResponse
+from measurement.measures import Distance
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
 from api.models import Trailhead, Route
-from api.serializers import TrailheadSerializer, RouteSerializer
+from api.serializers import (
+    TrailheadSerializer,
+    RouteSerializer,
+    UnitSystem,
+    HistogramSerializer,
+    Measurement,
+)
 from api.traveltime import get_travel_times_cached
 
 
@@ -22,11 +26,14 @@ class TrailheadFilter(NamedTuple):
 
 
 class Tolerance(NamedTuple):
-    value: float
-    tolerance: float
+    value: Distance
+    tolerance_pct: float
 
     def bounds(self):
-        return self.value - self.tolerance, self.value + self.tolerance
+        return (
+            self.value - self.value * self.tolerance_pct,
+            self.value + self.value * self.tolerance_pct,
+        )
 
 
 Length = "length"
@@ -39,11 +46,11 @@ class Ordering(NamedTuple):
     asc: bool
 
     def apply(self, queryset, trailhead_travel_map: Dict[Trailhead, int]):
-        prefix = "" if self.asc else "-"
+        reverse = "" if self.asc else "-"
         if self.field == Length:
-            return queryset.order_by(prefix + "length_km")
+            return queryset.order_by(reverse + "length")
         elif self.field == Elevation:
-            return queryset.order_by(prefix + "elevation_gain")
+            return queryset.order_by(reverse + "elevation_gain")
         elif self.field == Travel:
             return sorted(
                 queryset, key=lambda route: trailhead_travel_map[route.trailhead]
@@ -51,6 +58,7 @@ class Ordering(NamedTuple):
 
 
 class GeneralFilter(NamedTuple):
+    units: UnitSystem
     trailhead_filter: TrailheadFilter
     length_filter: Tolerance
     elevation_filter: Optional[Tolerance]
@@ -75,16 +83,17 @@ class NearbyTrailheadRequest(serializers.Serializer):
 
 class ToleranceFilter(serializers.Serializer):
     def __init__(self, *args, **kwargs):
-        if "default_tolerance" in kwargs:
-            self.default_tolerance = kwargs.pop("default_tolerance")
-
+        self.measurement = kwargs.pop("measurement")
         super().__init__(*args, **kwargs)
 
     value = serializers.FloatField()
     tolerance = serializers.FloatField()
 
-    def to_nt(self, validated_data):
-        return Tolerance(validated_data["value"], validated_data["tolerance"])
+    def to_nt(self, validated_data, units):
+        return Tolerance(
+            self.measurement.build(units, validated_data["value"]),
+            validated_data["tolerance"],
+        )
 
 
 class OrderingSerializer(serializers.Serializer):
@@ -96,9 +105,10 @@ class OrderingSerializer(serializers.Serializer):
 
 
 class GeneralRequest(serializers.Serializer):
+    units = serializers.ChoiceField(["metric", "imperial"], default="imperial")
     location_filter = NearbyTrailheadRequest()
-    length = ToleranceFilter(default_tolerance=1)
-    elevation = ToleranceFilter(required=False)
+    length = ToleranceFilter(measurement=Measurement.Distance)
+    elevation = ToleranceFilter(measurement=Measurement.Height, required=False)
     ordering = OrderingSerializer(required=False)
 
     def to_nt(self, validated_data):
@@ -106,18 +116,24 @@ class GeneralRequest(serializers.Serializer):
             ordering = self.fields["ordering"].to_nt(validated_data["ordering"])
         else:
             ordering = None
+
+        if validated_data["units"] == "metric":
+            units = UnitSystem.Metric
+        else:
+            units = UnitSystem.Imperial
         return GeneralFilter(
             trailhead_filter=self.fields["location_filter"].to_nt(
                 validated_data["location_filter"]
             ),
             elevation_filter=None,
-            length_filter=self.fields["length"].to_nt(validated_data["length"]),
+            length_filter=self.fields["length"].to_nt(validated_data["length"], units),
             ordering=ordering,
+            units=units,
         )
 
 
 def trailheads_near(
-        filter: TrailheadFilter, length: Optional[Tolerance]
+    filter: TrailheadFilter, length: Optional[Tolerance]
 ) -> Dict[Trailhead, int]:
     possible_trailheads = Trailhead.trailheads_near(
         filter.location, max_distance_km=filter.distance_km_filter
@@ -125,12 +141,11 @@ def trailheads_near(
 
     if length:
         possible_trailheads = possible_trailheads.filter(
-            trail_network__trail_length_km__gt=length.value
+            trail_network__trail_length__gt=length.value
         )
     return get_travel_times_cached(filter.location, possible_trailheads)
 
 
-# Create your views here.
 @api_view(["POST"])
 def nearby_trailheads(request):
     request = NearbyTrailheadRequest(data=request.data)
@@ -156,16 +171,14 @@ def find_loops(filter: GeneralFilter):
     print(f"found {len(possible_trailheads)} potential trailheads")
     min_length, max_length = filter.length_filter.bounds()
     filtered = Route.objects.filter(
-        trailhead__in=possible_trailheads,
-        length_km__lt=max_length,
-        length_km__gt=min_length,
+        trailhead__in=possible_trailheads, length__lt=max_length, length__gt=min_length
     )
 
     if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
-                .extra(select={"delta_len": f"abs(length_km-{filter.length_filter.value})"})
-                .order_by("delta_len")[:5]
+            .extra(select={"delta_len": f"abs(length-{filter.length_filter.value})"})
+            .order_by("delta_len")[:5]
         )
         filtered = Route.objects.filter(id__in=closest_matches)
     if filter.ordering is not None:
@@ -198,42 +211,26 @@ def histogram(request):
                 "min": min(actual_trailheads.values()),
             },
             "distance": {
-                "max": max(route.length_km for route in routes),
-                "min": min(route.length_km for route in routes),
+                "max": max(route.length for route in routes),
+                "min": min(route.length for route in routes),
             },
             "elevations": [route.elevation_gain for route in routes],
         }
     else:
         ret = {"num_routes": 0}
-    return Response(ret, status=200)
+    return Response(
+        {
+            **HistogramSerializer(ret, context=dict(unit=filter.units)).data,
+            "units": filter.units.name
+        }, status=200
+    )
 
 
 @api_view(["GET"])
 def export_gpx(request):
     id = request.query_params["id"]
     route = Route.objects.get(id=id)
-    nodes = route.nodes
-    gpx = gpxpy.gpx.GPX()
-
-    # Create first track in our GPX:
-    gpx_track = gpxpy.gpx.GPXTrack()
-    gpx.tracks.append(gpx_track)
-
-    # Create first segment in our GPX track:
-    gpx_segment = gpxpy.gpx.GPXTrackSegment()
-    gpx_track.segments.append(gpx_segment)
-
-    # Create points:
-    for node in nodes:
-        gpx_segment.points.append(
-            gpxpy.gpx.GPXTrackPoint(latitude=node[0], longitude=node[1])
-        )
-
-    data = gpx.to_xml()
-    outfile = StringIO()
-    outfile.write(data)
-    outfile.close()
-    response = HttpResponse(data, content_type="application/gpx")
+    response = HttpResponse(route.to_gpx(), content_type="application/gpx")
     response["Content-Disposition"] = "attachment; filename=route.gpx"
     return response
 
@@ -245,12 +242,15 @@ def top_trails(request):
         return Response(request.errors, status=status.HTTP_400_BAD_REQUEST)
     filter = request.to_nt(request.validated_data)
     routes, trailheads = find_loops(filter)
-    return Response(
-        RouteSerializer(
-            routes[:20], many=True, context=dict(trailheads=trailheads)
+    resp_data = {
+        "routes": RouteSerializer(
+            routes[:20],
+            many=True,
+            context=dict(trailheads=trailheads, unit=filter.units),
         ).data,
-        status=200,
-    )
+        "units": filter.units.name,
+    }
+    return Response(resp_data, status=200)
 
 
 @api_view(["GET"])

@@ -17,9 +17,11 @@ def draw_trails(file: Optional[str], center, radius, output_file):
         if radius is None:
             click.secho("Radius must be specified with lat/lon", fg="red")
             exit(1)
-        location_filter = LocationFilter(float(lat), float(lon), radius_km=radius)
+        location_filter: Optional[LocationFilter] = LocationFilter(
+            float(lat), float(lon), radius_km=radius
+        )
     else:
-        location_filter = None
+        location_filter: Optional[LocationFilter] = None
     trail_loader = OsmiumTrailLoader(location_filter)
     trail_loader.apply_file(file, locations=True)
     gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)

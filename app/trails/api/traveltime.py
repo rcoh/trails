@@ -12,6 +12,7 @@ APP_ID = "92be8391"
 
 UNREACHABLE = sys.maxsize
 
+
 def get_travel_times_cached(
     start_point: Point,
     target_locations: List[Trailhead],
@@ -45,7 +46,7 @@ def get_travel_times_cached(
             for trailhead in target_locations
             if trailhead in results_from_api or trailhead.node.osm_id in points_map
         }
-        return {k: time for k,time in results.items() if time < max_minutes*60}
+        return {k: time for k, time in results.items() if time < max_minutes * 60}
     else:
         results = get_travel_times(start_point, target_locations, max_minutes)
         cache_row = TravelCache(start_point=start_point)
@@ -59,7 +60,7 @@ def get_travel_times_cached(
             for trailhead, time in results.items()
         ]
         TravelTime.objects.bulk_create(travel_time_objects)
-        return {k: time for k,time in results.items() if time < max_minutes*60}
+        return {k: time for k, time in results.items() if time < max_minutes * 60}
 
 
 def get_travel_times(
@@ -95,13 +96,13 @@ def get_travel_times(
     )
     resp_json = resp.json()
     trailhead_map = {trailhead.node.osm_id: trailhead for trailhead in target_locations}
-    ret = {}
+    ret: Dict[Trailhead, int] = {}
     if "results" not in resp_json:
         return ret
     for location in resp_json["results"][0]["locations"]:
         osm_id = int(location["id"])
         ret[trailhead_map[osm_id]] = location["properties"][0]["travel_time"]
-    for location in resp_json["results"][0]['unreachable']:
+    for location in resp_json["results"][0]["unreachable"]:
         osm_id = int(location)
         ret[trailhead_map[osm_id]] = UNREACHABLE
 

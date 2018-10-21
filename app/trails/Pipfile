@@ -4,28 +4,27 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-gmplot = "==1.2.0"
 osmium = "==2.14.3"
 tqdm = "==4.25.0"
 geopy = "==1.16.0"
-pytest = "==3.7.4"
 networkx = "==2.1"
 djangorestframework = "==3.8.2"
 pytest-django = "==3.4.2"
-googlemaps = "==3.0.2"
 requests-mock = "==1.5.2"
 django-click = "==2.1.0"
-requests-cache = "==0.4.13"
 django-cors-headers = "==2.4.0"
-schematics = "==2.1.0"
 djangorestframework-gis = "==0.13"
 # "SRTM.py" = "*"
 Django = "==2.1.1"
-py-spy = "*"
 gpxpy = "*"
-black = "*"
+django-measurement = "*"
 
 [dev-packages]
+mypy = "*"
+black = "*"
+gmplot = "==1.2.0"
+pytest = "==3.7.4"
+py-spy = "*"
 
 [requires]
 python_version = "3.7"

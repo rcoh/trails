@@ -16,12 +16,60 @@ const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
 // Show trailheads on map
 //
 
+const UMap = {
+  'M-F': 3.1,
+  'Km-Mi': 0.625,
+}
+
+const Units = {
+  Km: {
+    long: 'kilometers'
+  },
+  Mi: {
+    long: 'miles'
+  }
+}
+
+const UnitSystems = {
+  metric: {
+    length: {
+      unit: 'Km',
+      precision: 1,
+    },
+    height: {
+      unit: 'm',
+      precision: 0
+    }
+  },
+  imperial: {
+    length: {
+      unit: 'Mi',
+      precision: 1
+    },
+    height: {
+      unit: 'ft',
+      precision: 0
+    }
+    
+  }
+}
+
+const displayUnitized = (unitized, desired) => {
+  if (unitized.unit == desired.unit) {
+    return unitized.value.toFixed(desired.precision);
+  } else {
+    const conversion = UMap[`${unitized.unit}-${desired}`];
+    return (unitized.value * conversion).toFixed(desired.precision);
+  }
+};
+
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
       location: { lat: 37.47463, lng: -122.23131 },
-      distance: 5
+      distance: 5,
+      units: UnitSystems.imperial
     };
     this.onSuggestSelect = this.onSuggestSelect.bind(this);
     this.updateDistance = this.updateDistance.bind(this);
@@ -74,6 +122,7 @@ class App extends Component {
         </div>
       );
     }
+    const unit = Units[this.state.units.length.unit].long;
     return (
       <div className="App container">
         <div>
@@ -85,7 +134,7 @@ class App extends Component {
           value={this.state.distance}
           onChange={this.updateDistance}
         />
-        kilometers
+        {unit}
         <Button color="primary" onClick={this.loadHistogram}>Go</Button>
         {histogram}
         {results}
@@ -171,7 +220,7 @@ class ResultHistogram extends Component {
     return (
       <div class="select-buttons">
         <Button color="success" onClick={() => this.props.select(minimizeElevation)}>
-          Flatest ({this.props.elevation.min.toFixed(0)} meters)
+          Flattest ({this.props.elevation.min.toFixed(0)} meters)
         </Button>
         <Button color="success" onClick={() => this.props.select(maximizeElevation)}>
           Hilliest ({this.props.elevation.max.toFixed(0)} meters)

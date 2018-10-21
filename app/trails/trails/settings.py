@@ -12,11 +12,11 @@ https://docs.djangoproject.com/en/2.1/ref/settings/
 
 import os
 
-IS_PROD = os.environ.get('ENV') == 'prod'
+IS_PROD = os.environ.get("ENV") == "prod"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_DIR = '/db/'
+DB_DIR = "/db/"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -39,7 +39,7 @@ if IS_PROD:
     SECURE_BROWSER_XSS_FILTER = True
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
-    X_FRAME_OPTIONS = 'DENY'
+    X_FRAME_OPTIONS = "DENY"
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,

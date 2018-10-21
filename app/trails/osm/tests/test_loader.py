@@ -2,6 +2,7 @@ from pathlib import Path
 
 import pytest
 from gmplot import gmplot
+from measurement.measures import Distance
 from pytest import fixture
 
 from osm.loader import (
@@ -68,9 +69,9 @@ def test_loader(huddart_trails):
 
 TestSettings = IngestSettings(
     max_segments=20,
-    max_distance_km=20,
+    max_distance=Distance(km=20),
     max_concurrent=10,
-    trailhead_distance_threshold_m=300,
+    trailhead_distance_threshold=Distance(m=300),
     quality_settings=DefaultQualitySettings,
 )
 
@@ -130,7 +131,7 @@ def test_loop_finder(test_data, huddart_trails):
     trailhead_map = [
         trailhead_map for tn, trailhead_map in ingestor.trailnetwork_results.items()
     ][0]
-    metas = [(trailhead, t.meta) for trailhead, t  in trailhead_map.items()]
+    metas = [(trailhead, t.meta) for trailhead, t in trailhead_map.items()]
     for (trailhead, meta) in metas:
         if meta.num_loops > 0:
             assert meta.loop_quality > 0.7, trailhead
@@ -142,7 +143,7 @@ def test_eaton_loop(test_data):
     eaton_network = ingestor.result().trail_networks[0]
     tramanto = [t for t in eaton_network.trailheads if t.name == "Tramanto Drive"][0]
     Settings = IngestSettings(
-        max_distance_km=50,
+        max_distance=Distance(km=50),
         max_segments=300,
         max_concurrent=10,
         quality_settings=DefaultQualitySettings,
