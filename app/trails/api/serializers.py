@@ -56,13 +56,19 @@ class UnitSystem(Enum):
     Metric = "metric"
     Imperial = "imperial"
 
+def united(obj, unit, precision):
+    return round(getattr(obj, unit), precision)
+    #return {
+    #    "unit": unit,
+    #    "value":
+    #}
 
 class HeightSerialzer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
-            return round(instance.m)
+            return united(instance, 'm', 0)
         elif self.context["unit"] == UnitSystem.Imperial:
-            return round(instance.ft)
+            return united(instance, 'ft', 0)
         else:
             raise Exception()
 
@@ -70,9 +76,9 @@ class HeightSerialzer(serializers.Serializer):
 class DistanceSerializer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
-            return round(instance.km, 1)
+            return united(instance, 'km', 1)
         elif self.context["unit"] == UnitSystem.Imperial:
-            return round(instance.mi, 1)
+            return united(instance, 'mi', 1)
         else:
             raise Exception()
 
@@ -101,7 +107,9 @@ class HistogramSerializer(serializers.Serializer):
     num_trailheads = serializers.IntegerField()
     elevation = RangeField(child=HeightSerialzer())
     distance = RangeField(child=DistanceSerializer())
+    travel_time = RangeField(child=serializers.IntegerField())
     elevations = ListSerializer(child=HeightSerialzer())
+
 
 class RouteSerializer(serializers.ModelSerializer):
     nodes = NodeListSerializer()

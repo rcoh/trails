@@ -16,52 +16,35 @@ const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
 // Show trailheads on map
 //
 
-const UMap = {
-  'M-F': 3.1,
-  'Km-Mi': 0.625,
-}
-
 const Units = {
-  Km: {
-    long: 'kilometers'
+  km: {
+    long: 'kilometers',
+    short: 'km'
   },
-  Mi: {
-    long: 'miles'
+  mi: {
+    long: 'miles',
+    short: 'miles'
+  },
+  m: {
+    long: 'meters',
+    short: 'm'
+  },
+  ft: {
+    long: 'feet',
+    short: 'ft'
   }
 }
 
 const UnitSystems = {
   metric: {
-    length: {
-      unit: 'Km',
-      precision: 1,
-    },
-    height: {
-      unit: 'm',
-      precision: 0
-    }
+    length: Units.km,
+    height: Units.m,
   },
   imperial: {
-    length: {
-      unit: 'Mi',
-      precision: 1
-    },
-    height: {
-      unit: 'ft',
-      precision: 0
-    }
-    
+    length: Units.mi,
+    height: Units.ft
   }
 }
-
-const displayUnitized = (unitized, desired) => {
-  if (unitized.unit == desired.unit) {
-    return unitized.value.toFixed(desired.precision);
-  } else {
-    const conversion = UMap[`${unitized.unit}-${desired}`];
-    return (unitized.value * conversion).toFixed(desired.precision);
-  }
-};
 
 class App extends Component {
   constructor(props) {
@@ -101,7 +84,7 @@ class App extends Component {
     let histogram;
     if (this.state.histogram) {
       histogram = (
-        <ResultHistogram {...this.state.histogram} select={this.loadResults} />
+        <ResultHistogram {...this.state.histogram} units={this.state.units} select={this.loadResults} />
       );
     }
 
@@ -109,20 +92,21 @@ class App extends Component {
     if (this.state.results) {
       const trail =
         this.state.trailIndex != null
-          ? this.state.results[this.state.trailIndex]
+          ? this.state.results.routes[this.state.trailIndex]
           : undefined;
       results = (
         <div>
           <TrailMap trail={trail} />
           <ResultTable
-            results={this.state.results}
+            results={this.state.results.routes}
+            units={this.state.units}
             onSelect={this.onTrailSelect}
             rowIndex={this.state.trailIndex}
           />
         </div>
       );
     }
-    const unit = Units[this.state.units.length.unit].long;
+    const unit = this.state.units.length.long;
     return (
       <div className="App container">
         <div>
@@ -157,7 +141,7 @@ class App extends Component {
     const trails = await loadAPI("trails/", loc);
     this.setState({
       results: trails,
-      trailIndex: trails.length > 0 ? 0 : undefined
+      trailIndex: trails.routes.length > 0 ? 0 : undefined
     });
   }
 
@@ -200,11 +184,6 @@ const minimizeElevation = { field: "elevation", asc: true };
 const maximizeElevation = { field: "elevation", asc: false };
 const minimizeTravelTime = { field: "travel", asc: true };
 
-const SliderT = Slider.createSliderWithTooltip(Slider);
-const sliderStyle = {
-  width: "30%"
-};
-
 class ResultHistogram extends Component {
   constructor(props) {
     super(props);
@@ -216,14 +195,13 @@ class ResultHistogram extends Component {
       marks[v] = "";
     });
 
-    //<SliderT min={this.props.elevation.min} max={this.props.elevation.max} style={sliderStyle} marks={marks}/>
     return (
-      <div class="select-buttons">
+      <div className="select-buttons">
         <Button color="success" onClick={() => this.props.select(minimizeElevation)}>
-          Flattest ({this.props.elevation.min.toFixed(0)} meters)
+          Flattest ({this.props.elevation.min.toFixed(0)} {this.props.units.height.long})
         </Button>
         <Button color="success" onClick={() => this.props.select(maximizeElevation)}>
-          Hilliest ({this.props.elevation.max.toFixed(0)} meters)
+          Hilliest ({this.props.elevation.max.toFixed(0)} {this.props.units.height.long})
         </Button>
         <Button color="success" onClick={() => this.props.select(minimizeTravelTime)}>
           Closest ({(this.props.travel_time.min / 60).toFixed(0)}{" "}
@@ -239,7 +217,8 @@ ResultHistogram.propTypes = {
   elevations: PropTypes.array.isRequired,
   distance: minMax.isRequired,
   travel_time: minMax.isRequired,
-  select: PropTypes.func.isRequired
+  select: PropTypes.func.isRequired,
+  units: PropTypes.object.isRequired
 };
 
 class ResultTable extends Component {
@@ -257,12 +236,12 @@ class ResultTable extends Component {
   downloadFile(props) {}
   columns = [
     {
-      Header: "Length (km)",
-      accessor: "length_km",
-      Cell: props => props.value.toFixed(1)
+      Header: `Length (${this.props.units.length.short})`,
+      accessor: "length",
+      //Cell: props => props.value.toFixed(1)
     },
     {
-      Header: "Elevation Gain (m)",
+      Header: `Elevation Gain (${this.props.units.height.short})`,
       accessor: "elevation_gain",
       Cell: props => props.value.toFixed(0)
     },
@@ -324,6 +303,7 @@ class ResultTable extends Component {
 }
 
 ResultTable.propTypes = {
+  units: PropTypes.object.isRequired,
   results: PropTypes.array.isRequired,
   onSelect: PropTypes.func.isRequired
 };
