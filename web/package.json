@@ -3,7 +3,6 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
-    "bootstrap": "4",
     "evergreen-ui": "^4.2.0",
     "rc-slider": "^8.6.3",
     "react": "^16.5.0",
@@ -11,8 +10,7 @@
     "react-geosuggest": "^2.8.0",
     "react-google-maps": "^9.4.5",
     "react-scripts": "1.1.5",
-    "react-table": "^6.8.6",
-    "reactstrap": "^6.5.0"
+    "react-table": "^6.8.6"
   },
   "scripts": {
     "start": "react-scripts start",

@@ -1,6 +1,7 @@
 from typing import Optional, NamedTuple, Dict
 
 from django.contrib.gis.geos import Point
+from django.db.models import Max, Min
 from django.http import HttpResponse
 from measurement.measures import Distance
 from rest_framework import serializers, status
@@ -105,7 +106,7 @@ class OrderingSerializer(serializers.Serializer):
 
 
 class GeneralRequest(serializers.Serializer):
-    units = serializers.ChoiceField(["metric", "imperial"], default="imperial")
+    units = serializers.ChoiceField(["metric", "imperial"])
     location_filter = NearbyTrailheadRequest()
     length = ToleranceFilter(measurement=Measurement.Distance)
     elevation = ToleranceFilter(measurement=Measurement.Height, required=False)
@@ -170,7 +171,7 @@ def find_loops(filter: GeneralFilter):
     )
     print(f"found {len(possible_trailheads)} potential trailheads")
     min_length, max_length = filter.length_filter.bounds()
-    filtered = Route.objects.filter(
+    filtered = Route.objects.defer("nodes").filter(
         trailhead__in=possible_trailheads, length__lt=max_length, length__gt=min_length
     )
 
@@ -194,17 +195,21 @@ def histogram(request):
 
     filter = request.to_nt(request.validated_data)
     routes, possible_trailheads = find_loops(filter)
+    return {"num_routes": 0}
+    results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
+    print(results)
     actual_trailheads = {
         route.trailhead: possible_trailheads[route.trailhead] for route in routes
     }
+
 
     if routes:
         ret = {
             "num_routes": len(routes),
             "num_trailheads": len(actual_trailheads),
             "elevation": {
-                "max": max([route.elevation_gain for route in routes]),
-                "min": min([route.elevation_gain for route in routes]),
+                "max": results['elevation_gain__max'],
+                "min": results['elevation_gain__min'],
             },
             "travel_time": {
                 "max": max(actual_trailheads.values()),
@@ -216,12 +221,13 @@ def histogram(request):
             },
             "elevations": [route.elevation_gain for route in routes],
         }
+        ret = HistogramSerializer(ret, context=dict(unit=filter.units)).data
     else:
         ret = {"num_routes": 0}
     return Response(
         {
-            **HistogramSerializer(ret, context=dict(unit=filter.units)).data,
-            "units": filter.units.name
+            **ret,
+            "units": filter.units.value
         }, status=200
     )
 
@@ -244,11 +250,11 @@ def top_trails(request):
     routes, trailheads = find_loops(filter)
     resp_data = {
         "routes": RouteSerializer(
-            routes[:20],
+            routes[:10],
             many=True,
             context=dict(trailheads=trailheads, unit=filter.units),
         ).data,
-        "units": filter.units.name,
+        "units": filter.units.value,
     }
     return Response(resp_data, status=200)
 

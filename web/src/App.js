@@ -1,7 +1,7 @@
 import React, { Component } from "react";
 import { compose, withProps, lifecycle } from "recompose";
 import PropTypes from "prop-types";
-import { Button } from 'reactstrap';
+import { Button } from "evergreen-ui";
 import ReactTable from "react-table";
 import "react-table/react-table.css";
 import "./App.css";
@@ -9,6 +9,7 @@ import Geosuggest from "react-geosuggest";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
 import Slider, { Range } from "rc-slider";
 import "rc-slider/assets/index.css";
+import { SegmentedControl, Pane, Text, Card, TextInput } from "evergreen-ui";
 
 /*global google*/
 const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
@@ -18,33 +19,35 @@ const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
 
 const Units = {
   km: {
-    long: 'kilometers',
-    short: 'km'
+    long: "kilometers",
+    short: "km"
   },
   mi: {
-    long: 'miles',
-    short: 'miles'
+    long: "miles",
+    short: "miles"
   },
   m: {
-    long: 'meters',
-    short: 'm'
+    long: "meters",
+    short: "m"
   },
   ft: {
-    long: 'feet',
-    short: 'ft'
+    long: "feet",
+    short: "ft"
   }
-}
+};
 
 const UnitSystems = {
   metric: {
     length: Units.km,
     height: Units.m,
+    name: "metric"
   },
   imperial: {
+    name: "imperial",
     length: Units.mi,
     height: Units.ft
   }
-}
+};
 
 class App extends Component {
   constructor(props) {
@@ -52,7 +55,7 @@ class App extends Component {
     this.state = {
       location: { lat: 37.47463, lng: -122.23131 },
       distance: 5,
-      units: UnitSystems.imperial
+      unitSystem: "imperial"
     };
     this.onSuggestSelect = this.onSuggestSelect.bind(this);
     this.updateDistance = this.updateDistance.bind(this);
@@ -76,16 +79,25 @@ class App extends Component {
 
   updateDistance(event) {
     this.setState({
-      distance: event.target.value,
+      distance: event.target.value
     });
   }
 
   render() {
     let histogram;
     if (this.state.histogram) {
-      histogram = (
-        <ResultHistogram {...this.state.histogram} units={this.state.units} select={this.loadResults} />
-      );
+      if (this.state.histogram.num_routes > 0) {
+        histogram = (
+          <Card width="28em">
+            <ResultHistogram
+              {...this.state.histogram}
+              select={this.loadResults}
+            />
+          </Card>
+        );
+      } else {
+        histogram = NoResults;
+      }
     }
 
     let results;
@@ -95,34 +107,78 @@ class App extends Component {
           ? this.state.results.routes[this.state.trailIndex]
           : undefined;
       results = (
-        <div>
+        <Card width="95%">
           <TrailMap trail={trail} />
           <ResultTable
             results={this.state.results.routes}
-            units={this.state.units}
+            units={this.state.results.units}
             onSelect={this.onTrailSelect}
             rowIndex={this.state.trailIndex}
           />
-        </div>
+        </Card>
       );
     }
-    const unit = this.state.units.length.long;
+    const unit = this.state.unitSystem;
+    const unitOptions = [
+      { label: "miles", value: "imperial" },
+      { label: "kilometers", value: "metric" }
+    ];
+    const rowStyle = {
+      marginTop: "5px",
+      marginBottom: "5px"
+    };
     return (
-      <div className="App container">
-        <div>
-          Starting from: <Geosuggest onSuggestSelect={this.onSuggestSelect} />
-        </div>
-        I want to hike/run about
-        <input
-          className="distance-input"
-          value={this.state.distance}
-          onChange={this.updateDistance}
-        />
-        {unit}
-        <Button color="primary" onClick={this.loadHistogram}>Go</Button>
+      <Pane display="flex" alignItems="center" flexDirection="column">
+        <Card
+          width="28em"
+          height="5em"
+          display="flex"
+          justifyContent="space-between"
+          flexDirection="column"
+        >
+          <Pane
+            display="flex"
+            justifyContent="space-around"
+            alignItems="center"
+            {...rowStyle}
+          >
+            <Text>Starting from:</Text>
+            <Geosuggest onSuggestSelect={this.onSuggestSelect} />
+          </Pane>
+          <Pane
+            display="flex"
+            justifyContent="space-around"
+            alignItems="center"
+            {...rowStyle}
+          >
+            <Text>I want to hike/run about</Text>
+            <TextInput
+              value={this.state.distance}
+              width="3em"
+              onChange={this.updateDistance}
+            />
+            <SegmentedControl
+              width={150}
+              options={unitOptions}
+              value={unit}
+              onChange={value =>
+                this.setState({
+                  unitSystem: value,
+                  histogram: undefined,
+                  results: undefined
+                })
+              }
+            />
+            <Button color="primary" onClick={this.loadHistogram}>
+              Go
+            </Button>
+          </Pane>
+        </Card>
+        <hr />
         {histogram}
+        <hr />
         {results}
-      </div>
+      </Pane>
     );
   }
 
@@ -136,6 +192,7 @@ class App extends Component {
         value: this.state.distance,
         tolerance: 1
       },
+      units: this.state.unitSystem,
       ordering
     };
     const trails = await loadAPI("trails/", loc);
@@ -154,7 +211,8 @@ class App extends Component {
       length: {
         value: this.state.distance,
         tolerance: 1
-      }
+      },
+      units: this.state.unitSystem
     };
     const histogram = await loadAPI("histogram/", loc);
     this.setState({ histogram, results: undefined });
@@ -184,6 +242,9 @@ const minimizeElevation = { field: "elevation", asc: true };
 const maximizeElevation = { field: "elevation", asc: false };
 const minimizeTravelTime = { field: "travel", asc: true };
 
+const NoResults = (
+  <Card><Text>Sorry, there aren't any results matching your search</Text></Card>
+);
 class ResultHistogram extends Component {
   constructor(props) {
     super(props);
@@ -191,23 +252,28 @@ class ResultHistogram extends Component {
 
   render() {
     const marks = {};
-    this.props.elevations.forEach(v => {
-      marks[v] = "";
-    });
-
+    const u = UnitSystems[this.props.units];
     return (
-      <div className="select-buttons">
-        <Button color="success" onClick={() => this.props.select(minimizeElevation)}>
-          Flattest ({this.props.elevation.min.toFixed(0)} {this.props.units.height.long})
+      <Pane display="flex" justifyContent="space-between">
+        <Button
+          color="success"
+          onClick={() => this.props.select(minimizeElevation)}
+        >
+          Flattest ({this.props.elevation.min.toFixed(0)} {u.height.long})
         </Button>
-        <Button color="success" onClick={() => this.props.select(maximizeElevation)}>
-          Hilliest ({this.props.elevation.max.toFixed(0)} {this.props.units.height.long})
+        <Button
+          color="success"
+          onClick={() => this.props.select(maximizeElevation)}
+        >
+          Hilliest ({this.props.elevation.max.toFixed(0)} {u.height.long})
         </Button>
-        <Button color="success" onClick={() => this.props.select(minimizeTravelTime)}>
-          Closest ({(this.props.travel_time.min / 60).toFixed(0)}{" "}
-          minutes)
+        <Button
+          color="success"
+          onClick={() => this.props.select(minimizeTravelTime)}
+        >
+          Closest ({(this.props.travel_time.min / 60).toFixed(0)} minutes)
         </Button>
-      </div>
+      </Pane>
     );
   }
 }
@@ -229,19 +295,20 @@ class ResultTable extends Component {
 
   componentDidUpdate(prevProps, prevState, snapshot) {
     if (prevProps.results != this.props.results) {
-      this.setState({selected: undefined});
+      this.setState({ selected: undefined });
     }
   }
 
   downloadFile(props) {}
+  u = UnitSystems[this.props.units];
   columns = [
     {
-      Header: `Length (${this.props.units.length.short})`,
-      accessor: "length",
+      Header: `Length (${this.u.length.short})`,
+      accessor: "length"
       //Cell: props => props.value.toFixed(1)
     },
     {
-      Header: `Elevation Gain (${this.props.units.height.short})`,
+      Header: `Elevation Gain (${this.u.height.short})`,
       accessor: "elevation_gain",
       Cell: props => props.value.toFixed(0)
     },

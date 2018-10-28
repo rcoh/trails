@@ -1,4 +1,4 @@
-body {
+/*body {
   margin: 0;
   padding: 0;
   font-family: sans-serif;
@@ -22,7 +22,7 @@ button {
 .select-buttons {
   /*display: flex;
   justify-content: space-between;*/
-}
+/*}*/
 
 /**
  * The geosuggest module
@@ -33,7 +33,7 @@ button {
   font-size: 1rem;
   position: relative;
   width: 50%;
-  margin: 1em auto;
+  /*margin: 1em auto;*/
   text-align: left;
 }
 .geosuggest__input {
