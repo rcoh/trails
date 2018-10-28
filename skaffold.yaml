@@ -1,11 +1,11 @@
-apiVersion: skaffold/v1alpha3
+apiVersion: skaffold/v1alpha5
 kind: Config
 build:
   artifacts:
-  - imageName: gcr.io/trailfinder-1536773117692/trails-app
-    workspace: ./app/
-  - imageName: gcr.io/trailfinder-1536773117692/trails-web
-    workspace: ./web/
+  - image: gcr.io/trailfinder-1536773117692/trails-app
+    context: ./app/
+  - image: gcr.io/trailfinder-1536773117692/trails-web
+    context: ./web/
 deploy:
   kubectl:
     manifests:

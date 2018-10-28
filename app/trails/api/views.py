@@ -134,7 +134,7 @@ class GeneralRequest(serializers.Serializer):
 
 
 def trailheads_near(
-    filter: TrailheadFilter, length: Optional[Tolerance]
+        filter: TrailheadFilter, length: Optional[Tolerance]
 ) -> Dict[Trailhead, int]:
     possible_trailheads = Trailhead.trailheads_near(
         filter.location, max_distance_km=filter.distance_km_filter
@@ -165,12 +165,12 @@ def nearby_trailheads(request):
     return Response(resp, status=200)
 
 
-def find_loops(filter: GeneralFilter):
+def find_loops(loop_filter: GeneralFilter):
     possible_trailheads: Dict[Trailhead, int] = trailheads_near(
-        filter.trailhead_filter, filter.length_filter
+        loop_filter.trailhead_filter, loop_filter.length_filter
     )
     print(f"found {len(possible_trailheads)} potential trailheads")
-    min_length, max_length = filter.length_filter.bounds()
+    min_length, max_length = loop_filter.length_filter.bounds()
     filtered = Route.objects.defer("nodes").filter(
         trailhead__in=possible_trailheads, length__lt=max_length, length__gt=min_length
     )
@@ -178,12 +178,12 @@ def find_loops(filter: GeneralFilter):
     if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
-            .extra(select={"delta_len": f"abs(length-{filter.length_filter.value})"})
-            .order_by("delta_len")[:5]
+                .extra(select={"delta_len": f"abs(length-{loop_filter.length_filter.value.m})"})
+                .order_by("delta_len")[:5]
         )
         filtered = Route.objects.filter(id__in=closest_matches)
-    if filter.ordering is not None:
-        filtered = filter.ordering.apply(filtered, possible_trailheads)
+    if loop_filter.ordering is not None:
+        filtered = loop_filter.ordering.apply(filtered, possible_trailheads)
     return filtered, possible_trailheads
 
 
@@ -195,15 +195,12 @@ def histogram(request):
 
     filter = request.to_nt(request.validated_data)
     routes, possible_trailheads = find_loops(filter)
-    return {"num_routes": 0}
-    results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
-    print(results)
-    actual_trailheads = {
-        route.trailhead: possible_trailheads[route.trailhead] for route in routes
-    }
 
-
-    if routes:
+    if routes.count() > 0:
+        actual_trailheads = {
+            route.trailhead: possible_trailheads[route.trailhead] for route in routes
+        }
+        results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
         ret = {
             "num_routes": len(routes),
             "num_trailheads": len(actual_trailheads),
@@ -216,10 +213,9 @@ def histogram(request):
                 "min": min(actual_trailheads.values()),
             },
             "distance": {
-                "max": max(route.length for route in routes),
-                "min": min(route.length for route in routes),
+                "max": results['length__max'],
+                "min": results['length__min'],
             },
-            "elevations": [route.elevation_gain for route in routes],
         }
         ret = HistogramSerializer(ret, context=dict(unit=filter.units)).data
     else:

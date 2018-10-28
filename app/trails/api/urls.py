@@ -1,6 +1,7 @@
-from django.urls import path
+from django.urls import path, include
 
 from api import views
+from trails import settings
 
 urlpatterns = [
     path("trailheads/", views.nearby_trailheads),
@@ -9,3 +10,13 @@ urlpatterns = [
     path("export/", views.export_gpx),
     path("statusz", views.statusz),
 ]
+
+if settings.DEBUG:
+    import debug_toolbar
+    urlpatterns = [
+        path('__debug__/', include(debug_toolbar.urls)),
+
+        # For django versions before 2.0:
+        # url(r'^__debug__/', include(debug_toolbar.urls)),
+
+    ] + urlpatterns

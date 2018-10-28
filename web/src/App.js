@@ -190,7 +190,7 @@ class App extends Component {
       },
       length: {
         value: this.state.distance,
-        tolerance: 1
+        tolerance: .10
       },
       units: this.state.unitSystem,
       ordering
@@ -210,7 +210,7 @@ class App extends Component {
       },
       length: {
         value: this.state.distance,
-        tolerance: 1
+        tolerance: .10
       },
       units: this.state.unitSystem
     };
@@ -303,21 +303,19 @@ class ResultTable extends Component {
   u = UnitSystems[this.props.units];
   columns = [
     {
-      Header: `Length (${this.u.length.short})`,
+      Header: <Text>{`Length (${this.u.length.short})`}</Text>,
       accessor: "length"
-      //Cell: props => props.value.toFixed(1)
     },
     {
-      Header: `Elevation Gain (${this.u.height.short})`,
+      Header: <Text>{`Elevation Gain (${this.u.height.short})`}</Text>,
       accessor: "elevation_gain",
-      Cell: props => props.value.toFixed(0)
     },
     {
-      Header: "Drive Time (minutes)",
+      Header: <Text>Drive Time (minutes)</Text>,
       accessor: "travel_time"
     },
     {
-      Header: "Export Gpx",
+      Header: <Text>Export Gpx</Text>,
       accessor: "id",
       Cell: props => (
         <div>

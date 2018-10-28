@@ -61,9 +61,12 @@ INSTALLED_APPS = [
     "rest_framework",
     "osm",
     "api",
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
+    "django.middleware.gzip.GZipMiddleware",
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -71,9 +74,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.gzip.GZipMiddleware",
     "corsheaders.middleware.CorsMiddleware",
 ]
+
+INTERNAL_IPS = ['127.0.0.1']
 
 CORS_ORIGIN_ALLOW_ALL = True
 
@@ -107,6 +111,10 @@ DATABASES = {
         "NAME": os.path.join(DB_DIR, "db.sqlite3"),
     }
 }
+
+DEBUG_TOOLBAR_PANELS = [
+    'djdt_flamegraph.FlamegraphPanel'
+]
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
