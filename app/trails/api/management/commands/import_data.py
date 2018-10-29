@@ -77,22 +77,22 @@ def import_data(
     nested_meta_dir = Path(meta_dir) / ingest_id
     os.makedirs(nested_meta_dir, exist_ok=True)
     metadata_file = nested_meta_dir / f"{datetime.datetime.utcnow().isoformat()}.json"
-    if backup_file.exists() and not no_cache:
-        result = pickle.load(open(backup_file, "rb"))
-        if recompute_loops:
-            loader.recompute_loops(result, parallelism)
-            result = loader.result()
-    else:
-        loader.ingest_file(path, parallelism=parallelism)
-        result = loader.result()
-        with open(backup_file, "wb") as f:
-            pickler = pickle.Pickler(f)
-            pickler.fast = True
-            pickler.dump(result)
+    #if backup_file.exists() and not no_cache:
+    #    result = pickle.load(open(backup_file, "rb"))
+    #    if recompute_loops:
+    #        loader.recompute_loops(result, parallelism)
+    #        result = loader.result()
+    #else:
+    #    loader.ingest_file(path, parallelism=parallelism)
+    #    result = loader.result()
+    #    with open(backup_file, "wb") as f:
+    #        pickler = pickle.Pickler(f)
+    #        pickler.fast = True
+    #        pickler.dump(result)
     ingest_time = time.time()
-    click.secho(
-        f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"
-    )
+    # click.secho(
+    #    f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"
+    #)
 
     if reset:
         # Need to delete everything before import TODO
@@ -106,15 +106,13 @@ def import_data(
     metadata = {}
     routes_import = 0
     trailheads_imported = 0
-    for trail_network_osm, trailhead_dict in tqdm(result.metaloops.items()):
+    for trail_network_osm, trailhead_dict in tqdm(loader.ingest_file(path, parallelism=parallelism)):
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
         tn.save()
         routes_for_network = []
         metadata[tn.unique_id] = {}
-        for trailhead_osm, trailhead_result in tqdm(
-            trailhead_dict.items(), desc="Trailheads"
-        ):
+        for trailhead_osm, trailhead_result in trailhead_dict.items():
             n = Node.from_osm_node(trailhead_osm.node)
             n.save()
             Trailhead.objects.filter(node__osm_id=n.osm_id).delete()

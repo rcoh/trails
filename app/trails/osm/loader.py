@@ -254,7 +254,7 @@ class OSMIngestor:
             iter = map(proc_network, networks_to_process)
 
         for (network, result) in tqdm(iter, total=len(networks_to_process)):
-            self.trailnetwork_results[network] = result
+            yield (network, result)
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
         res = {}

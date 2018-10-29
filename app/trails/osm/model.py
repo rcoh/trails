@@ -72,10 +72,10 @@ class Trail:
     @memoize
     def length(self):
         dists = [
-            geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon))
+            geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon)).m
             for (a, b) in window(self.nodes)
         ]
-        return Distance(m=reduce(lambda x, y: x + y, dists).m)
+        return Distance(m=sum(dists))
 
     @memoize
     def length_m(self):
