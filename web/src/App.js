@@ -304,7 +304,8 @@ class ResultTable extends Component {
   columns = [
     {
       Header: <Text>{`Length (${this.u.length.short})`}</Text>,
-      accessor: "length"
+      accessor: "length",
+      Cell: props => <Text>{props.value}</Text>
     },
     {
       Header: <Text>{`Elevation Gain (${this.u.height.short})`}</Text>,

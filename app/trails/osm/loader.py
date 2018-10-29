@@ -40,8 +40,8 @@ def drivable(way):
     accessible = way.tags.get("access") in ["yes", "permissive", None]
     explicitly_accessible = way.tags.get("access") in ["yes", "permissive"]
     service_road = (
-        way.tags.get("highway") == "service"
-        and way.tags.get("service") != "parking_aisle"
+            way.tags.get("highway") == "service"
+            and way.tags.get("service") != "parking_aisle"
     )
     if service_road and not explicitly_accessible:
         return False
@@ -119,6 +119,8 @@ class OsmLoadResult(NamedTuple):
 
 
 def worth_keeping(loop: Subpath):
+    if loop.length_m < SHORTEST_LOOP.m:
+        return False
     if loop.is_pure_out_and_back():
         return True
     else:
@@ -149,7 +151,7 @@ def proc_network(args):
 
 
 def meta(
-    trail_network: TrailNetwork, loops: List[Subpath], time: float
+        trail_network: TrailNetwork, loops: List[Subpath], time: float
 ) -> TrailheadMeta:
     num_loops = len(loops)
     if num_loops == 0:
@@ -345,39 +347,54 @@ def segment_trails(trails: List[Trail]):
 
 SHORTEST_LOOP = Distance(km=3)
 
+def problematic_network(network):
+    total_distance = network.total_length()
+    subgraph = network.graph
+    num_edges = len(subgraph.edges)
+    if (total_distance.km / num_edges) < .1:
+        return True
+    else:
+        return False
 
+MAX_SEARCH = 20
 def find_loops_from_root(
-    trail_network: TrailNetwork, root: Node, settings: IngestSettings
+        trail_network: TrailNetwork, root: Node, settings: IngestSettings
 ):
     max_segments = settings.max_segments
     max_distance = settings.max_distance
     max_concurrent = settings.max_concurrent
+    if problematic_network(trail_network):
+        return
 
     random.seed(735)
     subgraph = trail_network.graph
     num_edges = len(subgraph.edges)
 
-    max_segments = min(num_edges * 1.5, max_segments)
+    max_segments = min(num_edges, max_segments)
     max_distance = min(max_distance, trail_network.total_length() * 1.1)
     max_distance_m = max_distance.m
     active_paths = [Subpath.from_startnode(root)]
-    stop_searching_thresh = int(trail_network.total_length().km)
-    exit_thresh = int(trail_network.total_length().km * 4)
+    stop_searching_thresh = min(max(1, int(trail_network.total_length().km / 4)), 20)
+    exit_thresh = min(max(int(trail_network.total_length().km / 2), 1), 20)
     loops_yielded = 0
+    s = time.time()
+    layers = 0
     while active_paths and loops_yielded < exit_thresh:
+        layers += 1
         filtered_paths = []
         for path in active_paths:
             if (
-                path.length_m < max_distance_m
-                and len(path.trail_segments) < max_segments
+                    path.length_m < max_distance_m
+                    and len(path.trail_segments) < max_segments
             ):
                 filtered_paths.append(path)
         active_paths = filtered_paths
         final_paths = []
         if len(active_paths) > max_concurrent:
             active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
+            active_paths = [p for p in active_paths if p.quality() > 0.5]
             if loops_yielded < stop_searching_thresh:
-                pruned_paths = active_paths[max_concurrent:]
+                pruned_paths = [p for p in active_paths[max_concurrent:] if p.length_m > SHORTEST_LOOP.m / 2][:MAX_SEARCH]
                 for path in pruned_paths:
                     back_to_root = nx.shortest_path(
                         subgraph,
@@ -387,25 +404,26 @@ def find_loops_from_root(
                     )
                     for (n1, n2) in window(back_to_root):
                         edge = subgraph[n1][n2]
-                        path = path.add_node(edge["trail"])
+                        path = path.add_node(edge["trail"], mutate=True)
                     assert path.is_complete()
-                    if path.length_m > SHORTEST_LOOP.m:
+                    if worth_keeping(path):
                         loops_yielded += 1
                         yield path
-            active_paths = [p for p in active_paths if p.quality() > 0.5]
+                    if loops_yielded > stop_searching_thresh:
+                        break
             # active_paths = filter_similar(active_paths, 0.90)
             active_paths = active_paths[:max_concurrent]
         for path in active_paths:
             options = list(dict(subgraph[path.last_node()]).items())
             for next_node, next_trail in options:
                 if (
-                    next_trail["trail"].id == path.trail_segments[-1].id
-                    and len(options) > 1
+                        next_trail["trail"].id == path.trail_segments[-1].id
+                        and len(options) > 1
                 ):
                     continue
                 new_path = path.add_node(next_trail["trail"])
                 if new_path.is_complete():
-                    if new_path.length_m > SHORTEST_LOOP.m:
+                    if worth_keeping(new_path):
                         loops_yielded += 1
                         yield new_path
                 else:

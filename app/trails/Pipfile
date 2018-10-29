@@ -18,8 +18,6 @@ djangorestframework-gis = "==0.13"
 Django = "==2.1.1"
 gpxpy = "*"
 django-measurement = "*"
-djdt-flamegraph = "*"
-django-debug-toolbar = "*"
 
 [dev-packages]
 mypy = "*"
@@ -27,6 +25,9 @@ black = "*"
 gmplot = "==1.2.0"
 pytest = "==3.7.4"
 py-spy = "*"
+ipython = "*"
+django-debug-toolbar = "*"
+djdt-flamegraph = "*"
 
 [requires]
 python_version = "3.7"

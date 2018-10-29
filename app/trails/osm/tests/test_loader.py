@@ -163,7 +163,12 @@ def test_pulgas(test_data):
     pulgas_network = ingestor.result().trail_networks[0]
     trailhead_ids = [trailhead.node.id for trailhead in pulgas_network.trailheads]
     assert 1231648227 in trailhead_ids
-    assert len(ingestor.result().loops) > 0
+    assert ingestor.result().total_loops() > 0
+
+def test_sj_state(test_data):
+    ingestor = OSMIngestor(TestSettings)
+    ingestor.ingest_file(test_data / "sj-state.osm")
+    assert ingestor.result().total_loops() == 0
 
 
 def dont_test_elevation_change():

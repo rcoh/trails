@@ -99,7 +99,7 @@ class Trail:
         start_idx = 0
         result = []
         for seg_num, idx in enumerate(idxs):
-            new_nodes = self.nodes[start_idx : idx + 1]
+            new_nodes = self.nodes[start_idx: idx + 1]
             new_id = f"{self.way_id}-{seg_num}/{len(idxs)}"
             result.append(
                 Trail(
@@ -152,10 +152,10 @@ class Trailhead(NamedTuple):
 
 class TrailNetwork:
     def __init__(
-        self,
-        subgraph: SubGraph,
-        nontrail_nodeset: Dict[int, str],
-        distance_threshold: Distance,
+            self,
+            subgraph: SubGraph,
+            nontrail_nodeset: Dict[int, str],
+            distance_threshold: Distance,
     ) -> None:
         self.graph = subgraph
         max_trailheads = int(self.total_length().km) // 2
@@ -228,6 +228,9 @@ class TrailNetwork:
         for edge in self.graph.edges:
             yield self.graph[edge[0]][edge[1]]["trail"]
 
+    def __repr__(self):
+        return f"[trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
+
 
 def filt_neg(d):
     return {k: v for k, v in d.items() if v > 0}
@@ -235,24 +238,18 @@ def filt_neg(d):
 
 class Subpath:
     def __init__(
-        self,
-        segments: List[Trail],
-        length_m: int,
-        unique_length_m: int,
-        intersection_tracker: Optional[Counter] = None,
-        segment_dist: Optional[Counter] = None,
+            self,
+            segments: List[Trail],
+            length_m: int,
+            unique_length_m: int,
+            segment_dist: Optional[Counter] = None,
     ) -> None:
         self.start_node = segments[0].nodes[0]
         self.trail_segments = segments
         self.segment_dist = segment_dist or Counter()
-        self.intersection_tracker = intersection_tracker or Counter()
-        if intersection_tracker is None:
-            if segment_dist is not None:
-                raise Exception("both or none")
+        if segment_dist is None:
             for s in self.trail_segments:
                 self.segment_dist.update({s.id: s.length().m})
-                # explicitly only record the start node so we don't double count
-                self.record_node(s.nodes[0], self.intersection_tracker)
 
         self.length_m = length_m
         self.unique_length_m = unique_length_m
@@ -260,16 +257,22 @@ class Subpath:
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
 
     def record_node(self, node: Node, tracker):
-        if node == self.first_node() or node == self.last_node():
-            return
         tracker.update({node.id})
+
+    def compute_intersections(self):
+        res = defaultdict(set)
+        for segment in self.trail_segments:
+            res[segment.nodes[0].id].add(segment.id)
+            res[segment.nodes[-1].id].add(segment.id)
+        del res[self.trail_segments[0].nodes[0].id]
+        return res
 
     def name(self):
         trail_names = []
         for segment in self.trail_segments:
             if (
-                segment.name is not None
-                and self.segment_dist[segment.id] > self.length_m / 3
+                    segment.name is not None
+                    and self.segment_dist[segment.id] > self.length_m / 3
             ):
                 if segment.name not in trail_names:
                     trail_names.append(segment.name)
@@ -310,8 +313,11 @@ class Subpath:
         spur_quality = self.num_spurs() * -0.1
 
         graph_complexity = sum(
-            [-0.1 for v in self.intersection_tracker.values() if v >= 3]
+            [-0.1 * (len(v) - 2) for v in self.compute_intersections().values() if len(v) > 2]
         )
+        if graph_complexity < 0:
+            graph_complexity += 0.3
+            graph_complexity = min(0, graph_complexity)
 
         q = repeat_quality * repeat_weight + spur_quality + graph_complexity
         assert q <= 1
@@ -334,7 +340,7 @@ class Subpath:
                 n += 1
         return n
 
-    def add_node(self, trail_segment: Trail) -> "Subpath":
+    def add_node(self, trail_segment: Trail, mutate=False) -> "Subpath":
         current_final = self.last_node()
         if trail_segment.nodes[0] == current_final:
             new_segment = trail_segment
@@ -346,19 +352,22 @@ class Subpath:
         else:
             unique_length = 0
 
-        new_segment_dist = copy.deepcopy(self.segment_dist)
-        new_intersection_tracker = copy.deepcopy(self.intersection_tracker)
-        new_segment_dist.update({trail_segment.id: trail_segment.length().m})
-        # explicitly only record the start node so we don't double count
-        self.record_node(trail_segment.nodes[0], new_intersection_tracker)
+        if mutate:
+            self.trail_segments.append(new_segment)
+            self.segment_dist.update({trail_segment.id: trail_segment.length().m})
+            self.unique_length_m += unique_length
+            self.length_m += new_segment.length_m()
+            return self
+        else:
+            new_segment_dist = copy.deepcopy(self.segment_dist)
+            new_segment_dist.update({trail_segment.id: trail_segment.length().m})
 
-        return Subpath(
-            list(self.trail_segments) + [new_segment],
-            length_m=self.length_m + new_segment.length_m(),
-            unique_length_m=self.unique_length_m + unique_length,
-            segment_dist=new_segment_dist,
-            intersection_tracker=new_intersection_tracker,
-        )
+            return Subpath(
+                list(self.trail_segments) + [new_segment],
+                length_m=self.length_m + new_segment.length_m(),
+                unique_length_m=self.unique_length_m + unique_length,
+                segment_dist=new_segment_dist,
+            )
 
     def nodes(self) -> Iterator[Node]:
         for seg in self.trail_segments:

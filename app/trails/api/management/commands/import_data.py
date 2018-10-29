@@ -86,7 +86,9 @@ def import_data(
         loader.ingest_file(path, parallelism=parallelism)
         result = loader.result()
         with open(backup_file, "wb") as f:
-            pickle.dump(result, f)
+            pickler = pickle.Pickler(f)
+            pickler.fast = True
+            pickler.dump(result)
     ingest_time = time.time()
     click.secho(
         f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"

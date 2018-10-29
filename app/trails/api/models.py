@@ -1,3 +1,5 @@
+import pickle
+
 import gpxpy.gpx
 from django.contrib.gis.db.models.functions import Distance as GisDistance
 from django.contrib.gis.geos import Point, LineString
@@ -84,6 +86,7 @@ class Route(models.Model):
     trailhead = models.ForeignKey(Trailhead, db_index=True, on_delete=models.CASCADE)
     quality = models.FloatField()
     name = models.CharField(max_length=64, default="")
+    osm_rep = models.BinaryField(default=None, null=True)
 
     @classmethod
     def from_subpath(
@@ -102,6 +105,7 @@ class Route(models.Model):
             nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
             trailhead=trailhead,
             quality=subpath.quality(),
+            osm_rep=pickle.dumps(subpath)
         )
 
     def to_gpx(self):
