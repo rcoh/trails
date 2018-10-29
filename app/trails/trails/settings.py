@@ -60,13 +60,13 @@ INSTALLED_APPS = [
     "corsheaders",
     "rest_framework",
     "osm",
-    "api",
-    'debug_toolbar',
+    "api"
+    # 'debug_toolbar',
 ]
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",
-    'debug_toolbar.middleware.DebugToolbarMiddleware',
+    #'debug_toolbar.middleware.DebugToolbarMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -112,9 +112,9 @@ DATABASES = {
     }
 }
 
-DEBUG_TOOLBAR_PANELS = [
-    'djdt_flamegraph.FlamegraphPanel'
-]
+#DEBUG_TOOLBAR_PANELS = [
+#    'djdt_flamegraph.FlamegraphPanel'
+#]
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
