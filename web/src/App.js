@@ -9,7 +9,7 @@ import Geosuggest from "react-geosuggest";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
 import Slider, { Range } from "rc-slider";
 import "rc-slider/assets/index.css";
-import { SegmentedControl, Pane, Text, Card, TextInput } from "evergreen-ui";
+import { SegmentedControl, Pane, Text, Card, TextInput, Spinner } from "evergreen-ui";
 
 /*global google*/
 const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
@@ -100,6 +100,10 @@ class App extends Component {
       } else {
         histogram = NoResults;
       }
+    }
+    let spinner;
+    if (this.state.spinner) {
+      spinner = <Spinner />;
     }
 
     let results;
@@ -198,6 +202,7 @@ class App extends Component {
         {histogram}
         <hr />
         {results}
+        {spinner}
       </Pane>
     );
   }
@@ -215,8 +220,10 @@ class App extends Component {
       units: this.state.unitSystem,
       ordering
     };
+    this.setState({spinner: true});
     const trails = await loadAPI("trails/", loc);
     this.setState({
+      spinner: false,
       results: trails,
       trailIndex: trails.routes.length > 0 ? 0 : undefined
     });
@@ -234,8 +241,9 @@ class App extends Component {
       },
       units: this.state.unitSystem
     };
+    this.setState({spinner: true});
     const histogram = await loadAPI("histogram/", loc);
-    this.setState({ histogram, results: undefined });
+    this.setState({ spinner: false, histogram, results: undefined });
   }
 }
 
@@ -306,11 +314,10 @@ class ResultHistogram extends Component {
 
 ResultHistogram.propTypes = {
   elevation: minMax.isRequired,
-  elevations: PropTypes.array.isRequired,
   distance: minMax.isRequired,
   travel_time: minMax.isRequired,
   select: PropTypes.func.isRequired,
-  units: PropTypes.object.isRequired
+  units: PropTypes.string.isRequired
 };
 
 class ResultTable extends Component {
@@ -335,25 +342,27 @@ class ResultTable extends Component {
     },
     {
       Header: <Text>{`Elevation Gain (${this.u.height.short})`}</Text>,
-      accessor: "elevation_gain"
+      accessor: "elevation_gain",
+      Cell: props => <Text>{props.value}</Text>
     },
     {
       Header: <Text>Drive Time (minutes)</Text>,
-      accessor: "travel_time"
+      accessor: "travel_time",
+      Cell: props => <Text>{props.value}</Text>
     },
     {
       Header: <Text>Export Gpx</Text>,
       accessor: "id",
       Cell: props => (
-        <div>
-          <button
+        <Pane>
+          <Button
             onClick={() =>
               (window.location.href = `${server}/api/export/?id=${props.value}`)
             }
           >
             Export GPX
-          </button>
-        </div>
+          </Button>
+        </Pane>
       )
     }
   ];
