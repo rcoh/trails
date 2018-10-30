@@ -29,21 +29,41 @@ button {
  * The geosuggest module
  * NOTE: duplicated font-sizes' are for browsers which don't support rem (only IE 8)
  */
+ .top-container {
+   display: flex;
+   display: flex;
+   justify-content: space-between;
+   flex-direction: column;
+ }
+ /*
+@media only screen and (min-width: 28em) {
+  .top-container {
+    width: 28em;
+    height: 5em;
+  }
+}
+
+@media only screen and (max-width: 28em) {
+  .top-container{
+    width: 100%;
+  }
+}*/
+
 .geosuggest {
   font-size: 18px;
   font-size: 1rem;
   position: relative;
-  width: 50%;
+  /*width: 50%;*/
   /*margin: 1em auto;*/
   text-align: left;
 }
 .geosuggest__input {
-  width: 100%;
+  /*width: 100%;*/
   border: 2px solid transparent;
   box-shadow: 0 0 1px #3d464d;
-  padding: .5em 1em;
+  padding: 0.5em 1em;
   -webkit-transition: border 0.2s, box-shadow 0.2s;
-          transition: border 0.2s, box-shadow 0.2s;
+  transition: border 0.2s, box-shadow 0.2s;
 }
 .geosuggest__input:focus {
   border-color: #267dc0;
@@ -65,7 +85,7 @@ button {
   list-style: none;
   z-index: 5;
   -webkit-transition: max-height 0.2s, border 0.2s;
-          transition: max-height 0.2s, border 0.2s;
+  transition: max-height 0.2s, border 0.2s;
 }
 .geosuggest__suggests--hidden {
   max-height: 0;
@@ -79,7 +99,7 @@ button {
 .geosuggest__item {
   font-size: 18px;
   font-size: 1rem;
-  padding: .5em .65em;
+  padding: 0.5em 0.65em;
   cursor: pointer;
 }
 .geosuggest__item:hover,

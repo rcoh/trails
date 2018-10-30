@@ -49,6 +49,10 @@ const UnitSystems = {
   }
 };
 
+const defaultPadding = {
+  margin: ".5em"
+};
+
 class App extends Component {
   constructor(props) {
     super(props);
@@ -88,12 +92,10 @@ class App extends Component {
     if (this.state.histogram) {
       if (this.state.histogram.num_routes > 0) {
         histogram = (
-          <Card width="28em">
-            <ResultHistogram
-              {...this.state.histogram}
-              select={this.loadResults}
-            />
-          </Card>
+          <ResultHistogram
+            {...this.state.histogram}
+            select={this.loadResults}
+          />
         );
       } else {
         histogram = NoResults;
@@ -124,57 +126,75 @@ class App extends Component {
       { label: "kilometers", value: "metric" }
     ];
     const rowStyle = {
-      marginTop: "5px",
-      marginBottom: "5px"
+      marginTop: "3px",
+      marginBottom: "3px"
     };
     return (
       <Pane display="flex" alignItems="center" flexDirection="column">
-        <Card
-          width="28em"
+        <div
+          className="top-container"
+          /*width="28em"
           height="5em"
           display="flex"
           justifyContent="space-between"
-          flexDirection="column"
+          flexDirection="column"*/
         >
           <Pane
             display="flex"
-            justifyContent="space-around"
+            flexWrap="wrap"
+            justifyContent="center"
             alignItems="center"
             {...rowStyle}
           >
-            <Text>Starting from:</Text>
-            <Geosuggest onSuggestSelect={this.onSuggestSelect} />
+            <Text {...defaultPadding}>Starting from:</Text>
+            <Pane {...defaultPadding}>
+              <Geosuggest
+                onSuggestSelect={this.onSuggestSelect}
+                renderSuggestItem={suggest => <Text>{suggest.label}</Text>}
+              />
+            </Pane>
           </Pane>
           <Pane
             display="flex"
             justifyContent="space-around"
             alignItems="center"
+            flexWrap="wrap"
             {...rowStyle}
           >
-            <Text>I want to hike/run about</Text>
-            <TextInput
-              value={this.state.distance}
-              width="3em"
-              onChange={this.updateDistance}
-            />
-            <SegmentedControl
-              width={150}
-              options={unitOptions}
-              value={unit}
-              onChange={value =>
-                this.setState({
-                  unitSystem: value,
-                  histogram: undefined,
-                  results: undefined
-                })
-              }
-            />
-            <Button color="primary" onClick={this.loadHistogram}>
-              Go
+            <Text {...defaultPadding}>I want to hike/run about</Text>
+            <Pane display="flex" alignItems="center">
+              <TextInput
+                {...defaultPadding}
+                value={this.state.distance}
+                width="3em"
+                onChange={this.updateDistance}
+              />
+              <SegmentedControl
+                {...defaultPadding}
+                width={150}
+                options={unitOptions}
+                value={unit}
+                onChange={value =>
+                  this.setState({
+                    unitSystem: value,
+                    histogram: undefined,
+                    results: undefined
+                  })
+                }
+              />
+            </Pane>
+            <Button
+              flex="auto"
+              justifyContent="center"
+              appearance="primary"
+              onClick={this.loadHistogram}
+            >
+              <Pane display="flex" justifyContent="center">
+                Go
+              </Pane>
             </Button>
           </Pane>
-        </Card>
-        <hr />
+        </div>
         {histogram}
         <hr />
         {results}
@@ -190,7 +210,7 @@ class App extends Component {
       },
       length: {
         value: this.state.distance,
-        tolerance: .10
+        tolerance: 0.1
       },
       units: this.state.unitSystem,
       ordering
@@ -210,7 +230,7 @@ class App extends Component {
       },
       length: {
         value: this.state.distance,
-        tolerance: .10
+        tolerance: 0.1
       },
       units: this.state.unitSystem
     };
@@ -243,7 +263,9 @@ const maximizeElevation = { field: "elevation", asc: false };
 const minimizeTravelTime = { field: "travel", asc: true };
 
 const NoResults = (
-  <Card><Text>Sorry, there aren't any results matching your search</Text></Card>
+  <Card>
+    <Text>Sorry, there aren't any results matching your search</Text>
+  </Card>
 );
 class ResultHistogram extends Component {
   constructor(props) {
@@ -251,24 +273,28 @@ class ResultHistogram extends Component {
   }
 
   render() {
-    const marks = {};
     const u = UnitSystems[this.props.units];
     return (
-      <Pane display="flex" justifyContent="space-between">
+      <Pane
+        display="flex"
+        alignItems="center"
+        flexWrap="wrap"
+        justifyContent="center"
+      >
         <Button
-          color="success"
+          {...defaultPadding}
           onClick={() => this.props.select(minimizeElevation)}
         >
           Flattest ({this.props.elevation.min.toFixed(0)} {u.height.long})
         </Button>
         <Button
-          color="success"
+          {...defaultPadding}
           onClick={() => this.props.select(maximizeElevation)}
         >
           Hilliest ({this.props.elevation.max.toFixed(0)} {u.height.long})
         </Button>
         <Button
-          color="success"
+          {...defaultPadding}
           onClick={() => this.props.select(minimizeTravelTime)}
         >
           Closest ({(this.props.travel_time.min / 60).toFixed(0)} minutes)
@@ -309,7 +335,7 @@ class ResultTable extends Component {
     },
     {
       Header: <Text>{`Elevation Gain (${this.u.height.short})`}</Text>,
-      accessor: "elevation_gain",
+      accessor: "elevation_gain"
     },
     {
       Header: <Text>Drive Time (minutes)</Text>,
