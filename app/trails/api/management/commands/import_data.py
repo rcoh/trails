@@ -106,7 +106,9 @@ def import_data(
     metadata = {}
     routes_import = 0
     trailheads_imported = 0
-    for trail_network_osm, trailhead_dict in tqdm(loader.ingest_file(path, parallelism=parallelism)):
+    for network_result in loader.ingest_file(path, parallelism=parallelism):
+        trail_network_osm = network_result.trail_network
+        trailhead_dict = network_result.loops
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
         tn.save()

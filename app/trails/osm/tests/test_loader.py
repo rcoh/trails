@@ -77,10 +77,9 @@ TestSettings = IngestSettings(
 
 
 def test_trail_network(test_data, huddart_trails):
-
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "huddart.osm")
-    networks = list(ingestor.trail_networks())
+    results = list(ingestor.ingest_file(test_data / "huddart.osm"))
+    networks = [r.trail_network for r in results]
     assert len(networks) == 1
     matching = [
         network for network in networks if "Miramontes Trail" in network.trail_names()
@@ -119,7 +118,7 @@ def test_sidewalk_filter(test_data):
 
 def test_trailhead_cap(test_data):
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "gg-park.osm")
+    list(ingestor.ingest_file(test_data / "gg-park.osm"))
     networks = list(ingestor.trail_networks())
     assert networks[0].num_clustered < 20
     assert len(networks[0].trailheads) < 20
@@ -127,7 +126,7 @@ def test_trailhead_cap(test_data):
 
 def test_loop_finder(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "huddart.osm")
+    list(ingestor.ingest_file(test_data / "huddart.osm"))
     trailhead_map = [
         trailhead_map for tn, trailhead_map in ingestor.trailnetwork_results.items()
     ][0]
@@ -139,8 +138,8 @@ def test_loop_finder(test_data, huddart_trails):
 
 def test_eaton_loop(test_data):
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "eaton-big-canyon.osm")
-    eaton_network = ingestor.result().trail_networks[0]
+    res_iter = ingestor.ingest_file(test_data / "eaton-big-canyon.osm")
+    eaton_network = next(res_iter).trail_network
     tramanto = [t for t in eaton_network.trailheads if t.name == "Tramanto Drive"][0]
     Settings = IngestSettings(
         max_distance=Distance(km=50),
@@ -159,11 +158,12 @@ def test_eaton_loop(test_data):
 
 def test_pulgas(test_data):
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "pulgas.osm")
-    pulgas_network = ingestor.result().trail_networks[0]
+    result = next(ingestor.ingest_file(test_data / "pulgas.osm"))
+    pulgas_network = result.trail_network
     trailhead_ids = [trailhead.node.id for trailhead in pulgas_network.trailheads]
     assert 1231648227 in trailhead_ids
-    assert ingestor.result().total_loops() > 0
+    assert result.total_loops() > 0
+
 
 def test_sj_state(test_data):
     ingestor = OSMIngestor(TestSettings)

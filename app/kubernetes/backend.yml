@@ -32,6 +32,16 @@ spec:
           value: trails-app
         - name: ENV
           value: 'dev'
+        volumeMounts:
+        - mountPath: /db
+          name: trails-db
+          readOnly: true
+      volumes:
+      - name: trails-db
+        # This GCE PD must already exist.
+        gcePersistentDisk:
+          pdName: trails-db
+          fsType: ext4
 ---
 apiVersion: v1
 kind: Service

@@ -43,7 +43,7 @@ def drivable(way):
             way.tags.get("highway") == "service"
             and way.tags.get("service") != "parking_aisle"
     )
-    if service_road and not explicitly_accessible:
+    if service_road and not accessible:
         return False
     return not is_trail(way) and accessible and not no_cars
 
@@ -116,6 +116,13 @@ class OsmLoadResult(NamedTuple):
 
     def total_loops(self):
         return sum([len(l) for l in self.loops.values()])
+
+class NetworkResult(NamedTuple):
+    trail_network: TrailNetwork
+    loops: Dict[Trailhead, TrailheadResult]
+
+    def total_loops(self):
+        return sum([len(l.loops) for l in self.loops.values()])
 
 
 def worth_keeping(loop: Subpath):
@@ -232,8 +239,9 @@ class OSMIngestor:
 
         for (network, loops) in tqdm(iter, total=len(networks_to_process)):
             self.trailnetwork_results[network] = loops
+            yield NetworkResult(network, loops)
 
-    def ingest_file(self, filename: Path, parallelism=1):
+    def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
         # TODO: figure out file bounds, delete data within those bounds
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         osm_loader.apply_file(str(filename), locations=True)
@@ -254,7 +262,8 @@ class OSMIngestor:
             iter = map(proc_network, networks_to_process)
 
         for (network, result) in tqdm(iter, total=len(networks_to_process)):
-            yield (network, result)
+            self.trailnetwork_results[network] = result
+            yield NetworkResult(network, result)
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
         res = {}

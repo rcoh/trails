@@ -14,7 +14,6 @@ RUN pip install pipenv
 COPY trails/Pipfile /app/
 RUN pipenv install --pre
 RUN pipenv run pip install SRTM.py
-COPY trails-db/db.sqlite3 /db/db.sqlite3
 COPY trails/ /app/
 EXPOSE 8000
 RUN pipenv run python manage.py check
