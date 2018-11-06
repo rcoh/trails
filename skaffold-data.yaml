@@ -1,0 +1,10 @@
+apiVersion: skaffold/v1alpha5
+kind: Config
+build:
+  artifacts:
+  - image: gcr.io/trailfinder-1536773117692/trails-app
+    context: ./app/
+deploy:
+  kubectl:
+    manifests:
+    - ./app/kubernetes-import/*
