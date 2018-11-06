@@ -5,7 +5,7 @@ metadata:
   labels:
     app: trails-app
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: trails-app
@@ -31,7 +31,7 @@ spec:
         - name: SERVER
           value: trails-app
         - name: ENV
-          value: 'dev'
+          value: 'prod'
         volumeMounts:
         - mountPath: /db
           name: trails-db
@@ -42,6 +42,7 @@ spec:
         gcePersistentDisk:
           pdName: trails-db
           fsType: ext4
+          readOnly: true
 ---
 apiVersion: v1
 kind: Service

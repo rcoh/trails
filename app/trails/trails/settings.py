@@ -40,6 +40,23 @@ if IS_PROD:
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     X_FRAME_OPTIONS = "DENY"
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
+            "NAME": "trails-db-blue",
+            "USER": os.environ['DB_USER'],
+            "PASSWORD": os.environ['DB_PASSWORD'],
+            "HOST": os.environ['DB_HOST'],
+            "POST": os.environ['DB_PORT']
+        }
+    }
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.contrib.gis.db.backends.spatialite",
+            "NAME": os.path.join(DB_DIR, "db.sqlite3"),
+        }
+    }
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -105,12 +122,6 @@ WSGI_APPLICATION = "trails.wsgi.application"
 # https://docs.djangoproject.com/en/2.1/ref/settings/#databases
 
 SPATIALITE_LIBRARY_PATH = "mod_spatialite.so"
-DATABASES = {
-    "default": {
-        "ENGINE": "django.contrib.gis.db.backends.spatialite",
-        "NAME": os.path.join(DB_DIR, "db.sqlite3"),
-    }
-}
 
 #DEBUG_TOOLBAR_PANELS = [
 #    'djdt_flamegraph.FlamegraphPanel'

@@ -5,6 +5,8 @@ from django.db import migrations, models
 import django.db.models.deletion
 import django_measurement.models
 import measurement.measures.distance
+from django.contrib.postgres.operations import CreateExtension
+from trails.settings import IS_PROD
 
 
 class Migration(migrations.Migration):
@@ -13,7 +15,15 @@ class Migration(migrations.Migration):
 
     dependencies = []
 
+    if IS_PROD:
+        install_postgis = [
+            CreateExtension('postgis')
+        ]
+    else:
+        install_postgis = []
+
     operations = [
+        *install_postgis,
         migrations.CreateModel(
             name="Node",
             fields=[
