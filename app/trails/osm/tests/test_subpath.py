@@ -8,6 +8,7 @@ from osm.model import Trail, Subpath, Node
 def mock_trail(id, length, start_node_id=None, end_node_id=None):
     trail = Trail([MagicMock()], id, f"trail{id}")
     trail.length = MagicMock(return_value=Distance(meters=length))
+    trail.length_m = MagicMock(return_value=length)
     trail.reverse = MagicMock(return_value=trail)
     trail.nodes = [Node(start_node_id, 0, 0), Node(end_node_id, 0, 0)]
     return trail

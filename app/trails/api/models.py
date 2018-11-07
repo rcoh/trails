@@ -28,7 +28,7 @@ class TrailNetwork(models.Model):
 
 class Node(models.Model):
     point = models.PointField()
-    osm_id = models.PositiveIntegerField(primary_key=True)
+    osm_id = models.BigIntegerField(primary_key=True)
 
     @property
     def lat(self):
@@ -72,7 +72,7 @@ class TravelCache(models.Model):
 
 class TravelTime(models.Model):
     travel_time_minutes = models.FloatField()
-    osm_id = models.PositiveIntegerField()
+    osm_id = models.BigIntegerField()
     start_point = models.ForeignKey(TravelCache, on_delete=models.CASCADE)
 
 

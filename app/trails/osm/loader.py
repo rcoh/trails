@@ -13,6 +13,7 @@ import osmium as o
 from measurement.measures import Distance
 from tqdm import tqdm
 
+from osm import util
 from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node
 from osm.util import verify_identical_nodes, window
 
@@ -117,6 +118,7 @@ class OsmLoadResult(NamedTuple):
     def total_loops(self):
         return sum([len(l) for l in self.loops.values()])
 
+
 class NetworkResult(NamedTuple):
     trail_network: TrailNetwork
     loops: Dict[Trailhead, TrailheadResult]
@@ -211,6 +213,9 @@ DefaultIngestSettings = IngestSettings(
     quality_settings=DefaultQualitySettings,
 )
 
+def trail_length_km(trail):
+    return trail.length_m() / 1000
+
 
 class OSMIngestor:
     def __init__(self, ingest_settings: Optional[IngestSettings] = None) -> None:
@@ -244,11 +249,13 @@ class OSMIngestor:
     def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
         # TODO: figure out file bounds, delete data within those bounds
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
+        print(f"Loading trails from the pdf file")
         osm_loader.apply_file(str(filename), locations=True)
         trails = osm_loader.trails
         print(f"Importing {len(trails)} trails")
         self.trails.update(trails)
         self.non_trail_nodes.update(osm_loader.non_trail_nodes)
+        self.pool = Pool(parallelism)
         self.add_trails_to_graph(trails.values())
 
         networks_to_process = [
@@ -256,8 +263,7 @@ class OSMIngestor:
         ]
 
         if parallelism > 1:
-            p = Pool(parallelism)
-            iter = p.imap_unordered(proc_network, networks_to_process)
+            iter = self.pool.imap_unordered(proc_network, networks_to_process)
         else:
             iter = map(proc_network, networks_to_process)
 
@@ -307,10 +313,14 @@ class OSMIngestor:
         for trail in segmented_trails:
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
+
+        lengths = util.pmap([(s,) for s in segmented_trails], trail_length_km, self.pool)
+        assert len(lengths) == len(segmented_trails)
+        for trail, length in zip(segmented_trails, lengths):
             G.add_edge(
                 trail.nodes[0],
                 trail.nodes[-1],
-                weight=trail.length().km,
+                weight=length,
                 name=trail.name,
                 trail=trail,
             )
@@ -350,11 +360,12 @@ def segment_trails(trails: List[Trail]):
             flat_trails += trail.split_at(split_idxs)
         else:
             flat_trails.append(trail)
-    verify_identical_nodes(trails, flat_trails)
+    # verify_identical_nodes(trails, flat_trails)
     return flat_trails
 
 
 SHORTEST_LOOP = Distance(km=3)
+
 
 def problematic_network(network):
     total_distance = network.total_length()
@@ -365,7 +376,10 @@ def problematic_network(network):
     else:
         return False
 
+
 MAX_SEARCH = 20
+
+
 def find_loops_from_root(
         trail_network: TrailNetwork, root: Node, settings: IngestSettings
 ):
@@ -403,7 +417,8 @@ def find_loops_from_root(
             active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
             active_paths = [p for p in active_paths if p.quality() > 0.5]
             if loops_yielded < stop_searching_thresh:
-                pruned_paths = [p for p in active_paths[max_concurrent:] if p.length_m > SHORTEST_LOOP.m / 2][:MAX_SEARCH]
+                pruned_paths = [p for p in active_paths[max_concurrent:] if p.length_m > SHORTEST_LOOP.m / 2][
+                               :MAX_SEARCH]
                 for path in pruned_paths:
                     back_to_root = nx.shortest_path(
                         subgraph,

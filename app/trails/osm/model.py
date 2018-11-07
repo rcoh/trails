@@ -79,15 +79,16 @@ class Trail:
 
     @memoize
     def length_m(self):
-        return self.length().m
+        dists = [
+            geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon)).m
+            for (a, b) in window(self.nodes)
+        ]
+        return sum(dists)
 
     @classmethod
     def from_way(cls, way):
-        nodes = []
+        nodes = [Node(node.ref, node.lat, node.lon) for node in way.nodes]
         id = str(way.id)
-        for node in way.nodes:
-            n = Node(node.ref, node.lat, node.lon)
-            nodes.append(n)
 
         if way.tags.get("name"):
             name = way.tags["name"]
@@ -249,7 +250,7 @@ class Subpath:
         self.segment_dist = segment_dist or Counter()
         if segment_dist is None:
             for s in self.trail_segments:
-                self.segment_dist.update({s.id: s.length().m})
+                self.segment_dist.update({s.id: s.length_m()})
 
         self.length_m = length_m
         self.unique_length_m = unique_length_m
@@ -354,13 +355,13 @@ class Subpath:
 
         if mutate:
             self.trail_segments.append(new_segment)
-            self.segment_dist.update({trail_segment.id: trail_segment.length().m})
+            self.segment_dist.update({trail_segment.id: trail_segment.length_m()})
             self.unique_length_m += unique_length
             self.length_m += new_segment.length_m()
             return self
         else:
             new_segment_dist = copy.deepcopy(self.segment_dist)
-            new_segment_dist.update({trail_segment.id: trail_segment.length().m})
+            new_segment_dist.update({trail_segment.id: trail_segment.length_m()})
 
             return Subpath(
                 list(self.trail_segments) + [new_segment],

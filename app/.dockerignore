@@ -4,3 +4,4 @@ trails/.pytest_cache
 kubernetes/
 backup-dbs/
 .git/
+trails-db/
