@@ -103,7 +103,9 @@ class App extends Component {
     }
     let spinner;
     if (this.state.spinner) {
-      spinner = <Spinner />;
+      spinner = <Pane>
+         <Spinner /><br />
+      </Pane>;
     }
 
     let results;
