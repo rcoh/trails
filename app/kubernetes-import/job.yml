@@ -1,5 +1,5 @@
 apiVersion: apps/v1
-kind: ReplicaSet
+kind: Deployment
 metadata:
   name: trails-data
   labels:
@@ -25,7 +25,8 @@ spec:
         command: ["tail", "-f", "/dev/null"]
         resources:
           requests:
-            cpu: 16000m
+            cpu: "10000m"
+            memory: "20Gi"
         env:
         - name: SERVER
           value: trails-app

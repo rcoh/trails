@@ -268,7 +268,6 @@ class OSMIngestor:
             iter = map(proc_network, networks_to_process)
 
         for (network, result) in tqdm(iter, total=len(networks_to_process)):
-            self.trailnetwork_results[network] = result
             yield NetworkResult(network, result)
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
@@ -314,7 +313,7 @@ class OSMIngestor:
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
 
-        lengths = util.pmap([(s,) for s in segmented_trails], trail_length_km, self.pool)
+        lengths = util.pmap([(s,) for s in segmented_trails], trail_length_km, self.pool, chunksize=512)
         assert len(lengths) == len(segmented_trails)
         for trail, length in zip(segmented_trails, lengths):
             G.add_edge(

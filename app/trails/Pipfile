@@ -18,7 +18,7 @@ djangorestframework-gis = "==0.13"
 Django = "==2.1.1"
 gpxpy = "*"
 django-measurement = "*"
-"psycopg2" = "*"
+"psycopg2-binary" = "*"
 
 [dev-packages]
 mypy = "*"

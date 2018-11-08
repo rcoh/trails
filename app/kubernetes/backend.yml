@@ -32,17 +32,36 @@ spec:
           value: trails-app
         - name: ENV
           value: 'prod'
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-db-credentials
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: cloudsql-db-credentials
+              key: password
+        - name: DB_HOST
+          value: 127.0.0.1
+        - name: DB_PORT
+          value: '5432'
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.11
+        command: ["/cloud_sql_proxy",
+                  "-instances=trailfinder-1536773117692:us-west1:trails-db=tcp:5432",
+                  "-credential_file=/secrets/cloudsql/credentials.json"]
+        securityContext:
+          runAsUser: 2  # non-root user
+          allowPrivilegeEscalation: false
         volumeMounts:
-        - mountPath: /db
-          name: trails-db
-          readOnly: true
+          - name: cloudsql-instance-credentials
+            mountPath: /secrets/cloudsql
+            readOnly: true
       volumes:
-      - name: trails-db
-        # This GCE PD must already exist.
-        gcePersistentDisk:
-          pdName: trails-db
-          fsType: ext4
-          readOnly: true
+      - name: cloudsql-instance-credentials
+        secret:
+          secretName: cloudsql-instance-credentials
 ---
 apiVersion: v1
 kind: Service

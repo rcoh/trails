@@ -27,7 +27,7 @@ def window(iterable, size=2):
         yield win
 
 
-def pmap(iter, func, pool: Pool):
+def pmap(iter, func, pool: Pool, chunksize=1):
     if pool._processes == 1:
 
         def splat(arg_tup):
@@ -35,7 +35,7 @@ def pmap(iter, func, pool: Pool):
 
         return list(map(splat, iter))
     else:
-        return pool.starmap(func, iter)
+        return pool.starmap(func, iter, chunksize=chunksize)
 
 
 class memoize(object):

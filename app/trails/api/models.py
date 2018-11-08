@@ -46,7 +46,7 @@ class Node(models.Model):
 class Trailhead(models.Model):
     trail_network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
     node = models.OneToOneField(Node, on_delete=models.CASCADE, unique=True)
-    name = models.CharField(max_length=32)
+    name = models.TextField(max_length=32)
 
     def draw(self, gmap):
         gmap.plot(

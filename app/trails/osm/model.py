@@ -1,5 +1,6 @@
 import copy
 import random
+import time
 from collections import defaultdict, Counter
 from functools import reduce
 from typing import NamedTuple, List, Iterator, Dict, Optional
@@ -22,7 +23,12 @@ class Node(NamedTuple):
     lon: float
 
     def elevation(self):
-        return elevation.get_elevation(self.lat, self.lon)
+        try:
+            return elevation.get_elevation(self.lat, self.lon)
+        except Exception as e:
+            time.sleep(1)
+            print('Failed to get elevation. Retrying in 1s', e)
+            return self.elevation()
 
     def distance(self, other: "Node") -> Distance:
         return Distance(
@@ -54,7 +60,12 @@ class ElevationChange(NamedTuple):
                 gpxpy.gpx.GPXTrackPoint(latitude=node.lat, longitude=node.lon)
             )
 
-        elevation.add_elevations(gpx, smooth=True)
+        try:
+            elevation.add_elevations(gpx, smooth=True)
+        except Exception as ex:
+            time.sleep(1)
+            print('error while adding elevations', ex)
+            return ElevationChange.from_nodes(nodes)
         (gain, loss) = gpx_segment.get_uphill_downhill()
         return cls(gain, loss)
 

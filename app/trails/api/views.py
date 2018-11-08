@@ -1,14 +1,14 @@
 from typing import Optional, NamedTuple, Dict
 
 from django.contrib.gis.geos import Point
-from django.db.models import Max, Min
+from django.db.models import Max, Min, Sum
 from django.http import HttpResponse
 from measurement.measures import Distance
 from rest_framework import serializers, status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from api.models import Trailhead, Route
+from api.models import Trailhead, Route, TrailNetwork
 from api.serializers import (
     TrailheadSerializer,
     RouteSerializer,
@@ -258,3 +258,19 @@ def top_trails(request):
 @api_view(["GET"])
 def statusz(request):
     return Response({}, status=200)
+
+@api_view(["GET"])
+def meta(request):
+    num_networks = TrailNetwork.objects.count()
+    network_size = TrailNetwork.objects.aggregate(Sum('trail_length'))['trail_length__sum']
+    num_routes = Route.objects.count()
+    num_trailheads = Trailhead.objects.count()
+    route_length = Route.objects.aggregate(Sum('length'))['length__sum']
+
+    return Response(dict(
+        num_networks=num_networks,
+        total_distance=network_size.mi,
+        num_routes=num_routes,
+        num_trailheads=num_trailheads,
+        route_length=route_length.mi
+    ))

@@ -9,6 +9,7 @@ urlpatterns = [
     path("trails/", views.top_trails),
     path("export/", views.export_gpx),
     path("statusz", views.statusz),
+    path("meta/", views.meta)
 ]
 
 #if settings.DEBUG:

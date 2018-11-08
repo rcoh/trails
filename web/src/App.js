@@ -201,8 +201,8 @@ class App extends Component {
         </div>
         {histogram}
         <hr />
-        {results}
         {spinner}
+        {results}
       </Pane>
     );
   }
