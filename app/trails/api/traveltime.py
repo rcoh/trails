@@ -23,7 +23,8 @@ def get_travel_times_cached(
         start_point__distance_lte=(start_point, 1000)
     )
     if cached_results and not force_no_cache:
-        points = TravelTime.objects.filter(start_point=cached_results[0])
+        points = TravelTime.objects.filter(start_point=cached_results[0]).all()
+        target_locations = target_locations.select_related('node')
         points_map = {point.osm_id: point.travel_time_minutes for point in points}
         trailhead_map = {
             trailhead.node.osm_id: trailhead for trailhead in target_locations
