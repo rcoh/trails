@@ -197,11 +197,12 @@ def histogram(request):
 
     filter = request.to_nt(request.validated_data)
     routes, possible_trailheads = find_loops(filter)
+    routes = routes.defer('nodes')
     num_routes = routes.count()
 
     if num_routes > 0:
         actual_trailheads = {
-            route.trailhead: possible_trailheads[route.trailhead] for route in routes
+            route.trailhead: possible_trailheads[route.trailhead] for route in routes.only('trailhead')
         }
         results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
         ret = {
