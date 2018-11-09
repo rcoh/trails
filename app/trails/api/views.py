@@ -53,6 +53,8 @@ class Ordering(NamedTuple):
         elif self.field == Elevation:
             return queryset.order_by(reverse + "elevation_gain")
         elif self.field == Travel:
+            # we're going to have to download everything (no limit, so make sure we don't select nodes)
+            queryset = queryset.defer('nodes')
             return sorted(
                 queryset, key=lambda route: trailhead_travel_map[route.trailhead]
             )
@@ -171,9 +173,9 @@ def find_loops(loop_filter: GeneralFilter):
     )
     print(f"found {len(possible_trailheads)} potential trailheads")
     min_length, max_length = loop_filter.length_filter.bounds()
-    filtered = Route.objects.defer("nodes").filter(
+    filtered = Route.objects.defer("osm_rep").filter(
         trailhead__in=possible_trailheads, length__lt=max_length, length__gt=min_length
-    )
+    ).select_related('trailhead__node')
 
     if filtered.count() < 5:
         closest_matches = (
@@ -195,14 +197,15 @@ def histogram(request):
 
     filter = request.to_nt(request.validated_data)
     routes, possible_trailheads = find_loops(filter)
+    num_routes = routes.count()
 
-    if routes.count() > 0:
+    if num_routes > 0:
         actual_trailheads = {
             route.trailhead: possible_trailheads[route.trailhead] for route in routes
         }
         results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
         ret = {
-            "num_routes": len(routes),
+            "num_routes": num_routes,
             "num_trailheads": len(actual_trailheads),
             "elevation": {
                 "max": results['elevation_gain__max'],
