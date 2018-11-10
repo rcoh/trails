@@ -7,3 +7,4 @@ db.sqlite3
 .mypy_cache/
 app/backup-dbs
 app/trails-db
+.*sw*
