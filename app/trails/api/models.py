@@ -1,5 +1,6 @@
 import pickle
 
+import geopy.distance
 import gpxpy.gpx
 from django.contrib.gis.db.models.functions import Distance as GisDistance
 from django.contrib.gis.geos import Point, LineString
@@ -38,9 +39,15 @@ class Node(models.Model):
     def lon(self):
         return self.point.x
 
+    def distance(self, other: "Point") -> Distance:
+        return Distance(
+            m=geopy.distance.great_circle(
+                (self.lat, self.lon), (other.y, other.x)
+            ).m
+        )
+
     @classmethod
     def from_osm_node(cls, osm_node: osm.model.Node):
-        print('creating from node: ', osm_node)
         return cls(point=Point(x=osm_node.lon, y=osm_node.lat), osm_id=osm_node.id)
 
 
