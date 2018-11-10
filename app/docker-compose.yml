@@ -1,0 +1,21 @@
+version: '3'
+services:
+  db:
+    ports:
+    - "5432:5432"
+    image: mdillon/postgis
+    env_file:
+    - local.env
+  app:
+    ports:
+    - "8000:8000"
+    volumes:
+    - ./trails:/app
+    - /home/russell/code/trails-data/:/trail-data/
+    build: .
+    env_file:
+    - local.env
+    command: ["tail", "-f", "/dev/null"]
+    links:
+    - db
+
