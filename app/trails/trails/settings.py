@@ -161,7 +161,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
-if DEBUG:
+if DEBUG and False:
     LOGGING = {
         'version': 1,
         'filters': {

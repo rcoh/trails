@@ -106,7 +106,8 @@ class Route(models.Model):
             nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
             trailhead=trailhead,
             quality=subpath.quality(),
-            osm_rep=pickle.dumps(subpath)
+            osm_rep=pickle.dumps(subpath),
+            name=subpath.name()
         )
 
     def to_gpx(self):

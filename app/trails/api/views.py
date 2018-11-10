@@ -239,8 +239,11 @@ def histogram(request):
 def export_gpx(request):
     id = request.query_params["id"]
     route = Route.objects.get(id=id)
+    download_name = route.name.replace(' ', '-').lower()
+    if download_name == '':
+        download_name = 'route'
     response = HttpResponse(route.to_gpx(), content_type="application/gpx")
-    response["Content-Disposition"] = "attachment; filename=route.gpx"
+    response["Content-Disposition"] = f"attachment; filename={download_name}.gpx"
     return response
 
 

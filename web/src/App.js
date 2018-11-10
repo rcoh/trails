@@ -2,52 +2,28 @@ import React, { Component } from "react";
 import { compose, withProps, lifecycle } from "recompose";
 import PropTypes from "prop-types";
 import { Button } from "evergreen-ui";
-import ReactTable from "react-table";
+import { ResultTable } from "./ResultTable";
 import "react-table/react-table.css";
 import "./App.css";
 import Geosuggest from "react-geosuggest";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
-import Slider, { Range } from "rc-slider";
 import "rc-slider/assets/index.css";
-import { SegmentedControl, Pane, Text, Card, TextInput, Spinner } from "evergreen-ui";
+import { UnitSystems } from "./Util";
+import { loadAPI } from "./Api";
+import {
+  SegmentedControl,
+  Pane,
+  Text,
+  Card,
+  TextInput,
+  Spinner
+} from "evergreen-ui";
 
 /*global google*/
-const server = process.env["REACT_APP_SERVER"] || "http://localhost:8000";
 // Select address
 // Show trailheads on map
 //
 
-const Units = {
-  km: {
-    long: "kilometers",
-    short: "km"
-  },
-  mi: {
-    long: "miles",
-    short: "miles"
-  },
-  m: {
-    long: "meters",
-    short: "m"
-  },
-  ft: {
-    long: "feet",
-    short: "ft"
-  }
-};
-
-const UnitSystems = {
-  metric: {
-    length: Units.km,
-    height: Units.m,
-    name: "metric"
-  },
-  imperial: {
-    name: "imperial",
-    length: Units.mi,
-    height: Units.ft
-  }
-};
 
 const defaultPadding = {
   margin: ".5em"
@@ -103,9 +79,12 @@ class App extends Component {
     }
     let spinner;
     if (this.state.spinner) {
-      spinner = <Pane>
-         <Spinner /><br />
-      </Pane>;
+      spinner = (
+        <Pane>
+          <Spinner />
+          <br />
+        </Pane>
+      );
     }
 
     let results;
@@ -118,6 +97,7 @@ class App extends Component {
         <Card width="95%">
           <TrailMap trail={trail} />
           <ResultTable
+            origin={this.state.location}
             results={this.state.results.routes}
             units={this.state.results.units}
             onSelect={this.onTrailSelect}
@@ -222,7 +202,7 @@ class App extends Component {
       units: this.state.unitSystem,
       ordering
     };
-    this.setState({spinner: true});
+    this.setState({ spinner: true });
     const trails = await loadAPI("trails/", loc);
     this.setState({
       spinner: false,
@@ -243,25 +223,12 @@ class App extends Component {
       },
       units: this.state.unitSystem
     };
-    this.setState({spinner: true});
+    this.setState({ spinner: true });
     const histogram = await loadAPI("histogram/", loc);
     this.setState({ spinner: false, histogram, results: undefined });
   }
 }
 
-const loadAPI = async (endpoint, data) => {
-  const resp = await fetch(`${server}/api/${endpoint}`, {
-    method: "POST",
-    body: JSON.stringify(data),
-    headers: {
-      "Content-Type": "application/json"
-    }
-  });
-  if (!resp.ok) {
-    throw Error(JSON.stringify(await resp.json()));
-  }
-  return await resp.json();
-};
 
 const minMax = PropTypes.shape({
   min: PropTypes.number.isRequired,
@@ -274,14 +241,10 @@ const minimizeTravelTime = { field: "travel", asc: true };
 
 const NoResults = (
   <Card>
-    <Text>Sorry, there aren't any results matching your search</Text>
+    <Text>Sorry, there aren't any results matching your search. TrailsTo.run currently only has data from the United States.</Text>
   </Card>
 );
 class ResultHistogram extends Component {
-  constructor(props) {
-    super(props);
-  }
-
   render() {
     const u = UnitSystems[this.props.units];
     return (
@@ -320,95 +283,6 @@ ResultHistogram.propTypes = {
   travel_time: minMax.isRequired,
   select: PropTypes.func.isRequired,
   units: PropTypes.string.isRequired
-};
-
-class ResultTable extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { selected: undefined };
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevProps.results != this.props.results) {
-      this.setState({ selected: undefined });
-    }
-  }
-
-  downloadFile(props) {}
-  u = UnitSystems[this.props.units];
-  columns = [
-    {
-      Header: <Text>{`Length (${this.u.length.short})`}</Text>,
-      accessor: "length",
-      Cell: props => <Text>{props.value}</Text>
-    },
-    {
-      Header: <Text>{`Elevation Gain (${this.u.height.short})`}</Text>,
-      accessor: "elevation_gain",
-      Cell: props => <Text>{props.value}</Text>
-    },
-    {
-      Header: <Text>Drive Time (minutes)</Text>,
-      accessor: "travel_time",
-      Cell: props => <Text>{props.value}</Text>
-    },
-    {
-      Header: <Text>Export Gpx</Text>,
-      accessor: "id",
-      Cell: props => (
-        <Pane>
-          <Button
-            onClick={() =>
-              (window.location.href = `${server}/api/export/?id=${props.value}`)
-            }
-          >
-            Export GPX
-          </Button>
-        </Pane>
-      )
-    }
-  ];
-
-  selectedIndex() {
-    return this.state.selected || this.props.rowIndex;
-  }
-
-  render() {
-    const that = this;
-    return (
-      <ReactTable
-        data={this.props.results}
-        columns={this.columns}
-        getTrProps={(state, rowInfo) => {
-          if (rowInfo && rowInfo.row) {
-            return {
-              onClick: e => {
-                that.setState({
-                  selected: rowInfo.index
-                });
-                that.props.onSelect(rowInfo.index);
-              },
-              style: {
-                background:
-                  rowInfo.index === this.selectedIndex() ? "#00afec" : "white",
-                color:
-                  rowInfo.index === this.selectedIndex() ? "white" : "black",
-                cursor: "pointer"
-              }
-            };
-          } else {
-            return {};
-          }
-        }}
-      />
-    );
-  }
-}
-
-ResultTable.propTypes = {
-  units: PropTypes.object.isRequired,
-  results: PropTypes.array.isRequired,
-  onSelect: PropTypes.func.isRequired
 };
 
 const TrailMap = compose(
