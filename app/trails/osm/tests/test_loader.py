@@ -126,14 +126,12 @@ def test_trailhead_cap(test_data):
 
 def test_loop_finder(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
-    list(ingestor.ingest_file(test_data / "huddart.osm"))
-    trailhead_map = [
-        trailhead_map for tn, trailhead_map in ingestor.trailnetwork_results.items()
-    ][0]
-    metas = [(trailhead, t.meta) for trailhead, t in trailhead_map.items()]
-    for (trailhead, meta) in metas:
-        if meta.num_loops > 0:
-            assert meta.loop_quality > 0.7, trailhead
+    ingested_networks = list(ingestor.ingest_file(test_data / "huddart.osm"))
+    for network_result in ingested_networks:
+        for trailhead, result in network_result.loops.items():
+            meta = result.meta
+            if meta.num_loops > 0:
+                assert meta.loop_quality > 0.7, trailhead
 
 
 def test_eaton_loop(test_data):

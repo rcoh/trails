@@ -27,20 +27,21 @@ class TrailNetwork(models.Model):
 
 
 class Node(models.Model):
-    point = models.PointField()
+    point = models.PointField(geography=True)
     osm_id = models.BigIntegerField(primary_key=True)
 
     @property
     def lat(self):
-        return self.point.x
+        return self.point.y
 
     @property
     def lon(self):
-        return self.point.y
+        return self.point.x
 
     @classmethod
-    def from_osm_node(cls, osm_node=osm.model.Node):
-        return cls(point=Point(osm_node.lat, osm_node.lon), osm_id=osm_node.id)
+    def from_osm_node(cls, osm_node: osm.model.Node):
+        print('creating from node: ', osm_node)
+        return cls(point=Point(x=osm_node.lon, y=osm_node.lat), osm_id=osm_node.id)
 
 
 class Trailhead(models.Model):
@@ -59,10 +60,10 @@ class Trailhead(models.Model):
     def trailheads_near(pnt: Point, max_distance_km: float):
         return (
             Trailhead.objects.filter(
-                node__point__distance_lte=(pnt, D(m=max_distance_km * 1000))
+                node__point__dwithin=(pnt, D(m=max_distance_km * 1000))
             )
-            .annotate(distance=GisDistance("node__point", pnt))
-            .order_by("distance")
+                .annotate(distance=GisDistance("node__point", pnt))
+                .order_by("distance")
         )
 
 
@@ -90,10 +91,10 @@ class Route(models.Model):
 
     @classmethod
     def from_subpath(
-        cls,
-        subpath: osm.model.Subpath,
-        trail_network: TrailNetwork,
-        trailhead: Trailhead,
+            cls,
+            subpath: osm.model.Subpath,
+            trail_network: TrailNetwork,
+            trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         return cls(

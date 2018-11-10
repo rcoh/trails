@@ -3,6 +3,7 @@ import sys
 from typing import List, Dict
 import requests
 from django.contrib.gis.geos import Point
+from django.db.models import QuerySet
 
 from api.models import Trailhead, TravelTime, TravelCache
 
@@ -22,9 +23,10 @@ def get_travel_times_cached(
     cached_results = TravelCache.objects.filter(
         start_point__distance_lte=(start_point, 1000)
     )
+    if isinstance(target_locations, QuerySet):
+        target_locations = target_locations.select_related('node')
     if cached_results and not force_no_cache:
         points = TravelTime.objects.filter(start_point=cached_results[0]).all()
-        target_locations = target_locations.select_related('node')
         points_map = {point.osm_id: point.travel_time_minutes for point in points}
         trailhead_map = {
             trailhead.node.osm_id: trailhead for trailhead in target_locations
@@ -68,7 +70,7 @@ def get_travel_times(
     start_point: Point, target_locations: List[Trailhead], max_minutes=40
 ) -> Dict[Trailhead, int]:
     max_locations = 2000
-    locations = [dict(id="__start", coords=dict(lat=start_point.x, lng=start_point.y))]
+    locations = [dict(id="__start", coords=dict(lng=start_point.x, lat=start_point.y))]
     for trailhead in target_locations[:max_locations]:
         locations.append(
             dict(

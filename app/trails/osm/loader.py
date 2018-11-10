@@ -249,7 +249,7 @@ class OSMIngestor:
     def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
         # TODO: figure out file bounds, delete data within those bounds
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
-        print(f"Loading trails from the pdf file")
+        print(f"Loading trails from {filename}")
         osm_loader.apply_file(str(filename), locations=True)
         trails = osm_loader.trails
         print(f"Importing {len(trails)} trails")

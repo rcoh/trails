@@ -43,9 +43,9 @@ if IS_PROD:
     DATABASES = {
         "default": {
             "ENGINE": "django.contrib.gis.db.backends.postgis",
-            "NAME": "trails-db-blue",
-            "USER": os.environ['DB_USER'],
-            "PASSWORD": os.environ['DB_PASSWORD'],
+            "NAME": os.environ.get('POSTGRES_DB'),
+            "USER": os.environ.get('POSTGRES_USER'),
+            "PASSWORD": os.environ.get('POSTGRES_PASSWORD'),
             "HOST": os.environ['DB_HOST'],
             "POST": os.environ['DB_PORT']
         }
@@ -53,8 +53,12 @@ if IS_PROD:
 else:
     DATABASES = {
         "default": {
-            "ENGINE": "django.contrib.gis.db.backends.spatialite",
-            "NAME": os.path.join(DB_DIR, "db.sqlite3"),
+            "ENGINE": "django.contrib.gis.db.backends.postgis",
+            "NAME": os.environ.get('POSTGRES_DB'),
+            "USER": os.environ.get('POSTGRES_USER'),
+            "PASSWORD": os.environ.get('POSTGRES_PASSWORD'),
+            "HOST": 'db',
+            "POST": '5432'
         }
     }
 
@@ -83,7 +87,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.gzip.GZipMiddleware",
-    #'debug_toolbar.middleware.DebugToolbarMiddleware',
+    # 'debug_toolbar.middleware.DebugToolbarMiddleware',
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -123,9 +127,9 @@ WSGI_APPLICATION = "trails.wsgi.application"
 
 SPATIALITE_LIBRARY_PATH = "mod_spatialite.so"
 
-#DEBUG_TOOLBAR_PANELS = [
+# DEBUG_TOOLBAR_PANELS = [
 #    'djdt_flamegraph.FlamegraphPanel'
-#]
+# ]
 
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
@@ -157,7 +161,7 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
-if not IS_PROD:
+if DEBUG:
     LOGGING = {
         'version': 1,
         'filters': {
@@ -168,7 +172,7 @@ if not IS_PROD:
         'handlers': {
             'console': {
                 'level': 'DEBUG',
-                'filters': ['require_debug_true'],
+                # 'filters': [],
                 'class': 'logging.StreamHandler',
             }
         },
@@ -179,4 +183,3 @@ if not IS_PROD:
             }
         }
     }
-

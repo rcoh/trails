@@ -25,19 +25,18 @@ spec:
         command: ["tail", "-f", "/dev/null"]
         resources:
           requests:
-            cpu: "10000m"
-            memory: "20Gi"
+            cpu: "100m"
         env:
         - name: SERVER
           value: trails-app
         - name: ENV
           value: 'prod'
-        - name: DB_USER
+        - name: POSTGRES_USER
           valueFrom:
             secretKeyRef:
               name: cloudsql-db-credentials
               key: username
-        - name: DB_PASSWORD
+        - name: POSTGRES_PASSWORD
           valueFrom:
             secretKeyRef:
               name: cloudsql-db-credentials
@@ -46,6 +45,8 @@ spec:
           value: 127.0.0.1
         - name: DB_PORT
           value: '5432'
+        - name: POSTGRES_DB
+          value: trails-db-green
         volumeMounts:
           - name: trails-osm
             mountPath: /osm/

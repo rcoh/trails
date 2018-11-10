@@ -78,7 +78,7 @@ class NearbyTrailheadRequest(serializers.Serializer):
 
     def to_nt(self, validated_data):
         return TrailheadFilter(
-            location=Point(validated_data["lat"], validated_data["lon"]),
+            location=Point(validated_data["lon"], validated_data["lat"]),
             max_travel_time_minutes=validated_data["max_travel_time_minutes"],
             travel_mode=validated_data["travel_mode"],
         )
@@ -141,11 +141,14 @@ def trailheads_near(
     possible_trailheads = Trailhead.trailheads_near(
         filter.location, max_distance_km=filter.distance_km_filter
     )
+    print(possible_trailheads.count())
 
     if length:
         possible_trailheads = possible_trailheads.filter(
             trail_network__trail_length__gt=length.value
         )
+
+    # possible_trailheads = possible_trailheads.only('id')
     return get_travel_times_cached(filter.location, possible_trailheads)
 
 
