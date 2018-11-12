@@ -9,15 +9,6 @@ from rest_framework.serializers import ListSerializer
 from api.models import Route, Trailhead, Node
 
 
-class RecursiveSerializer(serializers.Serializer):
-    def to_representation(self, value):
-        serializer = self.parent.parent.__class__(value, context=self.context)
-        return serializer.data
-
-
-class NodeListSerializer(serializers.Serializer):
-    def to_representation(self, instance):
-        return [{"lat": lat, "lon": lon} for (lat, lon) in instance]
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -56,14 +47,16 @@ class UnitSystem(Enum):
     Metric = "metric"
     Imperial = "imperial"
 
+
 def united(obj, unit, precision):
     return round(getattr(obj, unit), precision)
-    #return {
+    # return {
     #    "unit": unit,
     #    "value":
-    #}
+    # }
 
-class HeightSerialzer(serializers.Serializer):
+
+class HeightSerializer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
             return united(instance, 'm', 0)
@@ -82,6 +75,12 @@ class DistanceSerializer(serializers.Serializer):
         else:
             raise Exception()
 
+class NodeListSerializer(serializers.Serializer):
+    def to_representation(self, instance):
+        ser = HeightSerializer(context=self.context)
+        return [{"lat": lat, "lon": lon,
+                 "elevation": ser.to_representation(Distance(m=elevation)) }
+                for (lat, lon, elevation) in instance]
 
 class RangeField(serializers.Serializer):
     min = _UnvalidatedField()
@@ -105,7 +104,7 @@ class RangeField(serializers.Serializer):
 class HistogramSerializer(serializers.Serializer):
     num_routes = serializers.IntegerField()
     num_trailheads = serializers.IntegerField()
-    elevation = RangeField(child=HeightSerialzer())
+    elevation = RangeField(child=HeightSerializer())
     distance = RangeField(child=DistanceSerializer())
     travel_time = RangeField(child=serializers.IntegerField())
 
@@ -114,8 +113,8 @@ class RouteSerializer(serializers.ModelSerializer):
     nodes = NodeListSerializer()
     trailhead = TrailheadSerializer()
     length = DistanceSerializer()
-    elevation_gain = HeightSerialzer()
-    elevation_loss = HeightSerialzer()
+    elevation_gain = HeightSerializer()
+    elevation_loss = HeightSerializer()
 
     class Meta:
         model = Route

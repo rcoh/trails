@@ -18,6 +18,7 @@ import {
   TextInput,
   Spinner
 } from "evergreen-ui";
+import ElevationPlot from "./ElevationProfile";
 
 /*global google*/
 // Select address
@@ -96,6 +97,7 @@ class App extends Component {
       results = (
         <Card width="95%">
           <TrailMap trail={trail} />
+          <ElevationPlot units={this.state.results.units} trail={trail} />
           <ResultTable
             origin={this.state.location}
             results={this.state.results.routes}

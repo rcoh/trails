@@ -43,7 +43,7 @@ class ElevationChange(NamedTuple):
     loss: float
 
     @classmethod
-    def from_nodes(cls, nodes: Iterator[Node]):
+    def to_elevated_gps(cls, nodes: Iterator[Node]):
         gpx = gpxpy.gpx.GPX()
 
         # Create first track in our GPX:
@@ -62,10 +62,20 @@ class ElevationChange(NamedTuple):
 
         try:
             elevation.add_elevations(gpx, smooth=True)
+            return gpx_segment
         except Exception as ex:
             time.sleep(1)
             print('error while adding elevations', ex)
-            return ElevationChange.from_nodes(nodes)
+            return ElevationChange.to_elevated_gps(nodes)
+
+    @classmethod
+    def elevations(cls, nodes: Iterator[Node]):
+        gpx_segment = cls.to_elevated_gps(nodes)
+        return [p.elevation for p in gpx_segment.points]
+
+    @classmethod
+    def from_nodes(cls, nodes: Iterator[Node]):
+        gpx_segment = cls.to_elevated_gps(nodes)
         (gain, loss) = gpx_segment.get_uphill_downhill()
         return cls(gain, loss)
 

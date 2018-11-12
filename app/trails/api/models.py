@@ -39,6 +39,10 @@ class Node(models.Model):
     def lon(self):
         return self.point.x
 
+    @property
+    def elevation(self):
+        return self.point.z
+
     def distance(self, other: "Point") -> Distance:
         return Distance(
             m=geopy.distance.great_circle(
@@ -90,7 +94,7 @@ class Route(models.Model):
     elevation_gain = MeasurementField(measurement=Distance, db_index=True)
     elevation_loss = MeasurementField(measurement=Distance, db_index=True)
     is_loop = models.BooleanField()
-    nodes = models.LineStringField()
+    nodes = models.LineStringField(dim=3)
     trailhead = models.ForeignKey(Trailhead, db_index=True, on_delete=models.CASCADE)
     quality = models.FloatField()
     name = models.CharField(max_length=64, default="")
@@ -104,20 +108,27 @@ class Route(models.Model):
             trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
+        elevations = osm.model.ElevationChange.elevations(subpath.nodes())
         return cls(
             trail_network=trail_network,
             length=Distance(m=subpath.length_m),
             elevation_gain=Distance(m=elev.gain),
             elevation_loss=Distance(m=elev.loss),
             is_loop=subpath.is_complete(),
-            nodes=LineString([Point(node.lat, node.lon) for node in subpath.nodes()]),
+            nodes=LineString([Point(node.lat, node.lon, 0) for (node, elev) in zip(subpath.nodes(), elevations)]),
             trailhead=trailhead,
             quality=subpath.quality(),
             osm_rep=pickle.dumps(subpath),
             name=subpath.name()
         )
 
-    def to_gpx(self):
+    def add_elevations(self):
+        osm_nodes = [osm.model.Node(id=-1, lon=node[1], lat=node[0]) for node in self.nodes]
+        elevations = osm.model.ElevationChange.elevations(osm_nodes)
+        new_nodes = [Point(node[0], node[1], elevation) for node, elevation in zip(self.nodes, elevations)]
+        self.nodes = LineString(new_nodes)
+
+    def to_gpx_segment(self):
         nodes = self.nodes
         gpx = gpxpy.gpx.GPX()
 
@@ -134,5 +145,7 @@ class Route(models.Model):
             gpx_segment.points.append(
                 gpxpy.gpx.GPXTrackPoint(latitude=node[0], longitude=node[1])
             )
+        return gpx_segment
 
-        return gpx.to_xml()
+    def to_gpx(self):
+        return self.to_gpx_segment().to_xml()
