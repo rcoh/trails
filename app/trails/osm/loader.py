@@ -202,6 +202,8 @@ class IngestSettings(NamedTuple):
     quality_settings: QualitySettings
     location_filter: Optional[LocationFilter] = None
     trailhead_distance_threshold: Distance = Distance(m=300)
+    timeout_s: int = 10
+    stop_searching_cutoff: Distance = Distance(mi=8)
 
 
 DefaultQualitySettings = QualitySettings(repeat_node_weight=1)
@@ -212,6 +214,7 @@ DefaultIngestSettings = IngestSettings(
     max_segments=50,
     quality_settings=DefaultQualitySettings,
 )
+
 
 def trail_length_km(trail):
     return trail.length_m() / 1000
@@ -398,10 +401,17 @@ def find_loops_from_root(
     active_paths = [Subpath.from_startnode(root)]
     stop_searching_thresh = min(max(1, int(trail_network.total_length().km / 4)), 20)
     exit_thresh = min(max(int(trail_network.total_length().km / 2), 1), 20)
+    max_length_target = min(max_distance, settings.stop_searching_cutoff)
+    length_target_met = False
     loops_yielded = 0
-    s = time.time()
+    start_time = time.time()
+
+    def timeout() -> bool:
+        now = time.time()
+        return now - start_time > settings.timeout_s
+
     layers = 0
-    while active_paths and loops_yielded < exit_thresh:
+    while active_paths and (not timeout()) and (loops_yielded < exit_thresh or (not length_target_met)):
         layers += 1
         filtered_paths = []
         for path in active_paths:
@@ -431,6 +441,8 @@ def find_loops_from_root(
                     assert path.is_complete()
                     if worth_keeping(path):
                         loops_yielded += 1
+                        if path.length_m >= max_length_target.m:
+                            length_target_met = True
                         yield path
                     if loops_yielded > stop_searching_thresh:
                         break
@@ -448,6 +460,8 @@ def find_loops_from_root(
                 if new_path.is_complete():
                     if worth_keeping(new_path):
                         loops_yielded += 1
+                        if path.length_m >= max_length_target.m:
+                            length_target_met = True
                         yield new_path
                 else:
                     final_paths.append(new_path)

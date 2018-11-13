@@ -50,6 +50,8 @@ if IS_PROD:
             "POST": os.environ['DB_PORT']
         }
     }
+    SRTM_CACHE_DIR = '/osm/srtm'
+    SRTMV4_BASE_DIR = '/osm/srtmv4'
 else:
     DATABASES = {
         "default": {
@@ -61,6 +63,8 @@ else:
             "POST": '5432'
         }
     }
+    SRTM_CACHE_DIR = os.path.expanduser('~/.cache/srtm')
+    SRTMV4_BASE_DIR = '/trail-data/srtm/'
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,

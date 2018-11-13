@@ -1,4 +1,5 @@
 import copy
+import os
 import random
 import time
 from collections import defaultdict, Counter
@@ -11,10 +12,24 @@ import gpxpy.gpx
 import srtm
 from measurement.measures import Distance
 from networkx.classes.graphviews import SubGraph
+from srtm.main import FileHandler
 
+from osm import elevations
 from osm.util import memoize, window, verify_identical_nodes
+from trails.settings import SRTM_CACHE_DIR
 
-elevation = srtm.get_data()
+
+class CustomFileHandler(FileHandler):
+    def __init__(self, dir):
+        self.dir = dir
+        os.makedirs(dir, exist_ok=True)
+        super().__init__()
+
+    def get_srtm_dir(self):
+        return self.dir
+
+
+elevation = srtm.get_data(file_handler=CustomFileHandler(SRTM_CACHE_DIR))
 
 
 class Node(NamedTuple):
@@ -43,7 +58,9 @@ class ElevationChange(NamedTuple):
     loss: float
 
     @classmethod
-    def to_elevated_gps(cls, nodes: Iterator[Node]):
+    def to_elevated_gps(cls, nodes: Iterator[Node], retries=5):
+        if retries == 0:
+            raise Exception('Failed to get gps for nodes')
         gpx = gpxpy.gpx.GPX()
 
         # Create first track in our GPX:
@@ -62,11 +79,20 @@ class ElevationChange(NamedTuple):
 
         try:
             elevation.add_elevations(gpx, smooth=True)
+            missing_points = False
+            for point in gpx_segment.points:
+                if point.elevation is None:
+                    elevations.get_elevation(point.latitude, point.longitude)
+                    missing_points = True
+            if missing_points:
+                gpx.smooth(vertical=True)
+
             return gpx_segment
         except Exception as ex:
+            raise
             time.sleep(1)
             print('error while adding elevations', ex)
-            return ElevationChange.to_elevated_gps(nodes)
+            return ElevationChange.to_elevated_gps(nodes, retries-1)
 
     @classmethod
     def elevations(cls, nodes: Iterator[Node]):

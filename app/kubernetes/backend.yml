@@ -5,7 +5,7 @@ metadata:
   labels:
     app: trails-app
 spec:
-  replicas: 1
+  replicas: 2
   selector:
     matchLabels:
       app: trails-app
@@ -23,6 +23,11 @@ spec:
         ports:
         - containerPort: 8000
         readinessProbe:
+          httpGet:
+            path: /api/statusz
+            port: 8000
+            scheme: HTTP
+        livenessProbe:
           httpGet:
             path: /api/statusz
             port: 8000

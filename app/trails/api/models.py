@@ -115,7 +115,7 @@ class Route(models.Model):
             elevation_gain=Distance(m=elev.gain),
             elevation_loss=Distance(m=elev.loss),
             is_loop=subpath.is_complete(),
-            nodes=LineString([Point(node.lat, node.lon, 0) for (node, elev) in zip(subpath.nodes(), elevations)]),
+            nodes=LineString([Point(node.lat, node.lon, elev) for (node, elev) in zip(subpath.nodes(), elevations)]),
             trailhead=trailhead,
             quality=subpath.quality(),
             osm_rep=pickle.dumps(subpath),
@@ -127,6 +127,7 @@ class Route(models.Model):
         elevations = osm.model.ElevationChange.elevations(osm_nodes)
         new_nodes = [Point(node[0], node[1], elevation) for node, elevation in zip(self.nodes, elevations)]
         self.nodes = LineString(new_nodes)
+        return True
 
     def to_gpx_segment(self):
         nodes = self.nodes
