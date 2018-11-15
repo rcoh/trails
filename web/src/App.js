@@ -59,50 +59,60 @@ class App extends Component {
     });
   }
 
-  render() {
-    let histogram;
-    if (this.state.histogram) {
-      if (this.state.histogram.num_routes > 0) {
-        histogram = (
-          <ResultHistogram
-            {...this.state.histogram}
-            select={this.loadResults}
-          />
-        );
-      } else {
-        histogram = NoResults;
-      }
+  renderHistogram() {
+    if (!this.state.histogram) {
+      return;
     }
-    let spinner;
+    if (this.state.histogram.num_routes === 0) {
+      return NoResults;
+    } else {
+      return (
+        <ResultHistogram {...this.state.histogram} select={this.loadResults} />
+      );
+    }
+  }
+
+  renderSpinner() {
     if (this.state.spinner) {
-      spinner = (
+      return (
         <Pane>
           <Spinner />
           <br />
         </Pane>
       );
+    } else {
+      return;
     }
+  }
 
-    let results;
-    if (this.state.results) {
-      const trail =
-        this.state.trailIndex != null
-          ? this.state.results.routes[this.state.trailIndex]
-          : undefined;
-      results = (
-        <Card width="95%">
-          <TrailMap trail={trail} />
-          <ElevationPlot units={this.state.results.units} trail={trail} />
-          <ResultTable
-            origin={this.state.location}
-            results={this.state.results.routes}
-            units={this.state.results.units}
-            onSelect={this.onTrailSelect}
-            rowIndex={this.state.trailIndex}
-          />
-        </Card>
-      );
+  renderResults() {
+    if (!this.state.results) {
+      return;
     }
+    const trail =
+      this.state.trailIndex != null
+        ? this.state.results.routes[this.state.trailIndex]
+        : undefined;
+    return (
+      <Card width="95%">
+        <TrailMap trail={trail} />
+        <ElevationPlot units={this.state.results.units} trail={trail} />
+        <ResultTable
+          origin={this.state.location}
+          results={this.state.results.routes}
+          units={this.state.results.units}
+          onSelect={this.onTrailSelect}
+          rowIndex={this.state.trailIndex}
+        />
+      </Card>
+    );
+  }
+
+  render() {
+    const histogram = this.renderHistogram();
+    const spinner = this.renderSpinner();
+    const results = this.renderResults();
+
     const unit = this.state.unitSystem;
     const unitOptions = [
       { label: "miles", value: "imperial" },
@@ -113,15 +123,13 @@ class App extends Component {
       marginBottom: "3px"
     };
     return (
+      // Outer level container
       <Pane display="flex" alignItems="center" flexDirection="column">
-        <div
-          className="top-container"
-          /*width="28em"
-          height="5em"
+        {/*<Pane
           display="flex"
           justifyContent="space-between"
-          flexDirection="column"*/
-        >
+          flexDirection="column"
+        >*/}
           <Pane
             display="flex"
             flexWrap="wrap"
@@ -177,7 +185,7 @@ class App extends Component {
               </Pane>
             </Button>
           </Pane>
-        </div>
+        {/*</Pane>*/}
         {histogram}
         <hr />
         {spinner}

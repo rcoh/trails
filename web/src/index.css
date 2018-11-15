@@ -29,25 +29,6 @@ button {
  * The geosuggest module
  * NOTE: duplicated font-sizes' are for browsers which don't support rem (only IE 8)
  */
- .top-container {
-   display: flex;
-   display: flex;
-   justify-content: space-between;
-   flex-direction: column;
- }
- /*
-@media only screen and (min-width: 28em) {
-  .top-container {
-    width: 28em;
-    height: 5em;
-  }
-}
-
-@media only screen and (max-width: 28em) {
-  .top-container{
-    width: 100%;
-  }
-}*/
 
 .geosuggest {
   font-size: 18px;
