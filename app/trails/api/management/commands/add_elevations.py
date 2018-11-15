@@ -55,7 +55,7 @@ def queryset_iterator(queryset, chunksize=500):
 @click.option('--start-id', type=click.INT)
 def add_elevations(parallelism, route_id, start_id):
     if route_id:
-        add_elevation(route_id)
+        print('result: ', add_elevation(Route.objects.get(id=route_id)))
         return
 
     p = Pool(parallelism)

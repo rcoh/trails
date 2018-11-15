@@ -29,7 +29,7 @@ class CustomFileHandler(FileHandler):
         return self.dir
 
 
-elevation = srtm.get_data(file_handler=CustomFileHandler(SRTM_CACHE_DIR))
+elevation = srtm.get_data(file_handler=CustomFileHandler(SRTM_CACHE_DIR), batch_mode=True)
 
 
 class Node(NamedTuple):
