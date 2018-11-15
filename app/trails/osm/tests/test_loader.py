@@ -148,11 +148,6 @@ def test_eaton_loop(test_data):
     )
     _, results = proc_network(eaton_network, Settings)
 
-    # subpaths = trail_result.loops
-    # assert len(subpaths) >= 1
-    # longest = sorted(subpaths, key=lambda p: p.length_km)[-1]
-    # assert longest.length_km > 6
-
 
 def test_pulgas(test_data):
     ingestor = OSMIngestor(TestSettings)
@@ -168,6 +163,7 @@ def test_sj_state(test_data):
     res = list(ingestor.ingest_file(test_data / "sj-state.osm"))
     assert len(res) == 1
     assert problematic_network(res[0].trail_network)
+    assert res[0].total_loops() == 0
 
 
 def dont_test_elevation_change():
