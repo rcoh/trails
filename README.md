@@ -15,7 +15,7 @@ For local development, the frontend and backend run separately. To run the front
 To start the frontend: 
 ```bash
 nvm install 9.10.0
-nvm use 8.10.0
+nvm use 9.10.0
 cd web
 yarn install
 yarn start
