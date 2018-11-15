@@ -29,7 +29,9 @@ class CustomFileHandler(FileHandler):
         return self.dir
 
 
-elevation = srtm.get_data(file_handler=CustomFileHandler(SRTM_CACHE_DIR), batch_mode=True)
+elevation = srtm.get_data(
+    file_handler=CustomFileHandler(SRTM_CACHE_DIR), batch_mode=True
+)
 
 
 class Node(NamedTuple):
@@ -42,7 +44,7 @@ class Node(NamedTuple):
             return elevation.get_elevation(self.lat, self.lon)
         except Exception as e:
             time.sleep(1)
-            print('Failed to get elevation. Retrying in 1s', e)
+            print("Failed to get elevation. Retrying in 1s", e)
             return self.elevation()
 
     def distance(self, other: "Node") -> Distance:
@@ -60,7 +62,7 @@ class ElevationChange(NamedTuple):
     @classmethod
     def to_elevated_gps(cls, nodes: Iterator[Node], retries=5):
         if retries == 0:
-            raise Exception('Failed to get gps for nodes')
+            raise Exception("Failed to get gps for nodes")
         gpx = gpxpy.gpx.GPX()
 
         # Create first track in our GPX:
@@ -91,8 +93,8 @@ class ElevationChange(NamedTuple):
         except Exception as ex:
             raise
             time.sleep(1)
-            print('error while adding elevations', ex)
-            return ElevationChange.to_elevated_gps(nodes, retries-1)
+            print("error while adding elevations", ex)
+            return ElevationChange.to_elevated_gps(nodes, retries - 1)
 
     @classmethod
     def elevations(cls, nodes: Iterator[Node]):
@@ -104,9 +106,6 @@ class ElevationChange(NamedTuple):
         gpx_segment = cls.to_elevated_gps(nodes)
         (gain, loss) = gpx_segment.get_uphill_downhill()
         return cls(gain, loss)
-
-
-trail_length_cache = {}
 
 
 class Trail:
@@ -361,7 +360,11 @@ class Subpath:
         spur_quality = self.num_spurs() * -0.1
 
         graph_complexity = sum(
-            [-0.1 * (len(v) - 2) for v in self.compute_intersections().values() if len(v) > 2]
+            [
+                -0.1 * (len(v) - 2)
+                for v in self.compute_intersections().values()
+                if len(v) > 2
+            ]
         )
         if graph_complexity < 0:
             graph_complexity += 0.3

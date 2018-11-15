@@ -6,14 +6,14 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0005_auto_20181107_0602'),
-    ]
+    dependencies = [("api", "0005_auto_20181107_0602")]
 
     operations = [
         migrations.AlterField(
-            model_name='node',
-            name='point',
-            field=django.contrib.gis.db.models.fields.PointField(geography=True, srid=4326),
-        ),
+            model_name="node",
+            name="point",
+            field=django.contrib.gis.db.models.fields.PointField(
+                geography=True, srid=4326
+            ),
+        )
     ]

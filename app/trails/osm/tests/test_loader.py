@@ -11,7 +11,7 @@ from osm.loader import (
     IngestSettings,
     DefaultQualitySettings,
     proc_network,
-)
+    problematic_network)
 from osm.model import Node, ElevationChange
 
 
@@ -146,7 +146,7 @@ def test_eaton_loop(test_data):
         quality_settings=DefaultQualitySettings,
         location_filter=None,
     )
-    _, results = proc_network((eaton_network, Settings))
+    _, results = proc_network(eaton_network, Settings)
 
     # subpaths = trail_result.loops
     # assert len(subpaths) >= 1
@@ -165,8 +165,9 @@ def test_pulgas(test_data):
 
 def test_sj_state(test_data):
     ingestor = OSMIngestor(TestSettings)
-    ingestor.ingest_file(test_data / "sj-state.osm")
-    assert ingestor.result().total_loops() == 0
+    res = list(ingestor.ingest_file(test_data / "sj-state.osm"))
+    assert len(res) == 1
+    assert problematic_network(res[0].trail_network)
 
 
 def dont_test_elevation_change():

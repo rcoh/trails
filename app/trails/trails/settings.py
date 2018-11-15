@@ -43,28 +43,28 @@ if IS_PROD:
     DATABASES = {
         "default": {
             "ENGINE": "django.contrib.gis.db.backends.postgis",
-            "NAME": os.environ.get('POSTGRES_DB'),
-            "USER": os.environ.get('POSTGRES_USER'),
-            "PASSWORD": os.environ.get('POSTGRES_PASSWORD'),
-            "HOST": os.environ['DB_HOST'],
-            "POST": os.environ['DB_PORT']
+            "NAME": os.environ.get("POSTGRES_DB"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "HOST": os.environ["DB_HOST"],
+            "POST": os.environ["DB_PORT"],
         }
     }
-    SRTM_CACHE_DIR = '/osm/srtm'
-    SRTMV4_BASE_DIR = '/osm/srtmv4'
+    SRTM_CACHE_DIR = "/osm/srtm"
+    SRTMV4_BASE_DIR = "/osm/srtmv4"
 else:
     DATABASES = {
         "default": {
             "ENGINE": "django.contrib.gis.db.backends.postgis",
-            "NAME": os.environ.get('POSTGRES_DB'),
-            "USER": os.environ.get('POSTGRES_USER'),
-            "PASSWORD": os.environ.get('POSTGRES_PASSWORD'),
-            "HOST": 'db',
-            "POST": '5432'
+            "NAME": os.environ.get("POSTGRES_DB"),
+            "USER": os.environ.get("POSTGRES_USER"),
+            "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
+            "HOST": "db",
+            "POST": "5432",
         }
     }
-    SRTM_CACHE_DIR = os.path.expanduser('~/.cache/srtm')
-    SRTMV4_BASE_DIR = '/trail-data/srtm/'
+    SRTM_CACHE_DIR = os.path.expanduser("~/.cache/srtm")
+    SRTMV4_BASE_DIR = "/trail-data/srtm/"
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -102,7 +102,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 ]
 
-INTERNAL_IPS = ['127.0.0.1']
+INTERNAL_IPS = ["127.0.0.1"]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
@@ -167,23 +167,14 @@ STATIC_URL = "/static/"
 
 if DEBUG and False:
     LOGGING = {
-        'version': 1,
-        'filters': {
-            'require_debug_true': {
-                '()': 'django.utils.log.RequireDebugTrue',
-            }
-        },
-        'handlers': {
-            'console': {
-                'level': 'DEBUG',
+        "version": 1,
+        "filters": {"require_debug_true": {"()": "django.utils.log.RequireDebugTrue"}},
+        "handlers": {
+            "console": {
+                "level": "DEBUG",
                 # 'filters': [],
-                'class': 'logging.StreamHandler',
+                "class": "logging.StreamHandler",
             }
         },
-        'loggers': {
-            'django.db.backends': {
-                'level': 'DEBUG',
-                'handlers': ['console'],
-            }
-        }
+        "loggers": {"django.db.backends": {"level": "DEBUG", "handlers": ["console"]}},
     }

@@ -23,20 +23,20 @@ def test_subpath_similarity():
     # assert subpath_1.similarity(subpath_2) == 1
 
     assert (
-            Subpath.from_segments([trail_1, trail_2]).similarity(
-                Subpath.from_segments([trail_2, trail_1])
-            )
-            == 1
+        Subpath.from_segments([trail_1, trail_2]).similarity(
+            Subpath.from_segments([trail_2, trail_1])
+        )
+        == 1
     )
     assert (
-            Subpath.from_segments([trail_1]).similarity(Subpath.from_segments([trail_2]))
-            == 0
+        Subpath.from_segments([trail_1]).similarity(Subpath.from_segments([trail_2]))
+        == 0
     )
     assert (
-            Subpath.from_segments([trail_1, trail_3]).similarity(
-                Subpath.from_segments([trail_1, trail_2])
-            )
-            == 0.5
+        Subpath.from_segments([trail_1, trail_3]).similarity(
+            Subpath.from_segments([trail_1, trail_2])
+        )
+        == 0.5
     )
 
 
@@ -75,5 +75,3 @@ def test_subpath_intersections():
     for segment in segments:
         s = s.add_node(segment)
     assert s.compute_intersections() == {2: {0, 1, 3}, 3: {1, 2}, 4: {2, 3}}
-
-

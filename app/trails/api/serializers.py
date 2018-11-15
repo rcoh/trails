@@ -9,8 +9,6 @@ from rest_framework.serializers import ListSerializer
 from api.models import Route, Trailhead, Node
 
 
-
-
 class NodeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Node
@@ -59,9 +57,9 @@ def united(obj, unit, precision):
 class HeightSerializer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
-            return united(instance, 'm', 0)
+            return united(instance, "m", 0)
         elif self.context["unit"] == UnitSystem.Imperial:
-            return united(instance, 'ft', 0)
+            return united(instance, "ft", 0)
         else:
             raise Exception()
 
@@ -69,18 +67,25 @@ class HeightSerializer(serializers.Serializer):
 class DistanceSerializer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
-            return united(instance, 'km', 1)
+            return united(instance, "km", 1)
         elif self.context["unit"] == UnitSystem.Imperial:
-            return united(instance, 'mi', 1)
+            return united(instance, "mi", 1)
         else:
             raise Exception()
+
 
 class NodeListSerializer(serializers.Serializer):
     def to_representation(self, instance):
         ser = HeightSerializer(context=self.context)
-        return [{"lat": lat, "lon": lon,
-                 "elevation": ser.to_representation(Distance(m=elevation)) }
-                for (lat, lon, elevation) in instance]
+        return [
+            {
+                "lat": lat,
+                "lon": lon,
+                "elevation": ser.to_representation(Distance(m=elevation)),
+            }
+            for (lat, lon, elevation) in instance
+        ]
+
 
 class RangeField(serializers.Serializer):
     min = _UnvalidatedField()

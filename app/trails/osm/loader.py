@@ -4,7 +4,7 @@ import random
 import time
 from multiprocessing.pool import Pool
 from pathlib import Path
-from typing import List, Dict, NamedTuple, Iterator, Optional, Set
+from typing import List, Dict, NamedTuple, Iterator, Optional, Set, Tuple
 
 import collections
 import geopy.distance
@@ -41,8 +41,8 @@ def drivable(way):
     accessible = way.tags.get("access") in ["yes", "permissive", None]
     explicitly_accessible = way.tags.get("access") in ["yes", "permissive"]
     service_road = (
-            way.tags.get("highway") == "service"
-            and way.tags.get("service") != "parking_aisle"
+        way.tags.get("highway") == "service"
+        and way.tags.get("service") != "parking_aisle"
     )
     if service_road and not accessible:
         return False
@@ -99,8 +99,8 @@ class TrailheadMeta(NamedTuple):
     num_loops: int
     loop_diversity: float
     loop_quality: float
-    longest_loop: int
-    shortest_loop: int
+    longest_loop: float
+    shortest_loop: float
     network_length: float
     ingest_time: float
 
@@ -136,8 +136,7 @@ def worth_keeping(loop: Subpath):
         return loop.quality() > MIN_QUALITY and loop.num_spurs() < 1
 
 
-def proc_network(args):
-    network, settings = args
+def proc_network(network, settings) -> Tuple[TrailNetwork, Dict[Trailhead, TrailheadResult]]:
     tqdm.write(f"Processing trail network {network}")
     ret: Dict[Trailhead, TrailheadResult] = {}
     for trailhead in network.trailheads:
@@ -156,18 +155,18 @@ def proc_network(args):
         end_time = time.time()
         metadata = meta(network, new_loops, time=end_time - start_time)
         ret[trailhead] = TrailheadResult(new_loops, metadata)
-    return (network, ret)
+    return network, ret
 
 
 def meta(
-        trail_network: TrailNetwork, loops: List[Subpath], time: float
+    trail_network: TrailNetwork, loops: List[Subpath], time: float
 ) -> TrailheadMeta:
     num_loops = len(loops)
     if num_loops == 0:
-        loop_quality = 0
-        loop_diversity = 0
-        longest_loop = 0
-        shortest_loop = 0
+        loop_quality = 0.
+        loop_diversity = 0.
+        longest_loop = 0.
+        shortest_loop = 0.
     else:
         loop_quality = sum([loop.quality() for loop in loops]) / num_loops
         pairs = list(itertools.combinations(loops, 2))
@@ -232,23 +231,6 @@ class OSMIngestor:
             TrailNetwork, Dict[Trailhead, TrailheadResult]
         ] = {}
 
-    def recompute_loops(self, results: OsmLoadResult, parallelism: int):
-        # process the biggest networks first to take advantage of parallelism
-        networks_to_process = sorted(
-            [(network, self.ingest_settings) for network in results.trail_networks],
-            key=lambda net_set: -1 * net_set[0].total_length_km(),
-        )
-
-        if parallelism > 1:
-            p = Pool(parallelism)
-            iter = p.imap_unordered(proc_network, networks_to_process)
-        else:
-            iter = map(proc_network, networks_to_process)
-
-        for (network, loops) in tqdm(iter, total=len(networks_to_process)):
-            self.trailnetwork_results[network] = loops
-            yield NetworkResult(network, loops)
-
     def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
         # TODO: figure out file bounds, delete data within those bounds
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
@@ -265,12 +247,9 @@ class OSMIngestor:
             (network, self.ingest_settings) for network in self.trail_networks()
         ]
 
-        if parallelism > 1:
-            iter = self.pool.imap_unordered(proc_network, networks_to_process)
-        else:
-            iter = map(proc_network, networks_to_process)
+        results_iter = util.pmap(networks_to_process, proc_network, self.pool)
 
-        for (network, result) in tqdm(iter, total=len(networks_to_process)):
+        for (network, result) in tqdm(results_iter, total=len(networks_to_process)):
             yield NetworkResult(network, result)
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
@@ -290,25 +269,6 @@ class OSMIngestor:
             res = trails
         return res
 
-    def result(self) -> OsmLoadResult:
-        nodes: Set[Node] = set()
-        for trail in self.trails.values():
-            nodes.update(trail.nodes)
-
-        ret = {}
-        for k, result in self.trailnetwork_results.items():
-            ret[k] = sum([v.loops for v in result.values()], [])
-
-        return OsmLoadResult(
-            list(self.trail_networks()), loops=ret, metaloops=self.trailnetwork_results
-        )
-
-    def loops(self):
-        for _, result in self.trailnetwork_results.items():
-            for _, result in result.items():
-                for loop in result.loops:
-                    yield loop
-
     def add_trails_to_graph(self, new_trails):
         segmented_trails = segment_trails(new_trails)
         G = self.global_graph
@@ -316,7 +276,9 @@ class OSMIngestor:
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
 
-        lengths = util.pmap([(s,) for s in segmented_trails], trail_length_km, self.pool, chunksize=512)
+        lengths = util.pmap(
+            [(s,) for s in segmented_trails], trail_length_km, self.pool, chunksize=512
+        )
         assert len(lengths) == len(segmented_trails)
         for trail, length in zip(segmented_trails, lengths):
             G.add_edge(
@@ -373,7 +335,7 @@ def problematic_network(network):
     total_distance = network.total_length()
     subgraph = network.graph
     num_edges = len(subgraph.edges)
-    if (total_distance.km / num_edges) < .1:
+    if (total_distance.km / num_edges) < 0.1:
         return True
     else:
         return False
@@ -383,7 +345,7 @@ MAX_SEARCH = 20
 
 
 def find_loops_from_root(
-        trail_network: TrailNetwork, root: Node, settings: IngestSettings
+    trail_network: TrailNetwork, root: Node, settings: IngestSettings
 ):
     max_segments = settings.max_segments
     max_distance = settings.max_distance
@@ -411,13 +373,17 @@ def find_loops_from_root(
         return now - start_time > settings.timeout_s
 
     layers = 0
-    while active_paths and (not timeout()) and (loops_yielded < exit_thresh or (not length_target_met)):
+    while (
+        active_paths
+        and (not timeout())
+        and (loops_yielded < exit_thresh or (not length_target_met))
+    ):
         layers += 1
         filtered_paths = []
         for path in active_paths:
             if (
-                    path.length_m < max_distance_m
-                    and len(path.trail_segments) < max_segments
+                path.length_m < max_distance_m
+                and len(path.trail_segments) < max_segments
             ):
                 filtered_paths.append(path)
         active_paths = filtered_paths
@@ -426,8 +392,11 @@ def find_loops_from_root(
             active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
             active_paths = [p for p in active_paths if p.quality() > 0.5]
             if loops_yielded < stop_searching_thresh:
-                pruned_paths = [p for p in active_paths[max_concurrent:] if p.length_m > SHORTEST_LOOP.m / 2][
-                               :MAX_SEARCH]
+                pruned_paths = [
+                    p
+                    for p in active_paths[max_concurrent:]
+                    if p.length_m > SHORTEST_LOOP.m / 2
+                ][:MAX_SEARCH]
                 for path in pruned_paths:
                     back_to_root = nx.shortest_path(
                         subgraph,
@@ -452,8 +421,8 @@ def find_loops_from_root(
             options = list(dict(subgraph[path.last_node()]).items())
             for next_node, next_trail in options:
                 if (
-                        next_trail["trail"].id == path.trail_segments[-1].id
-                        and len(options) > 1
+                    next_trail["trail"].id == path.trail_segments[-1].id
+                    and len(options) > 1
                 ):
                     continue
                 new_path = path.add_node(next_trail["trail"])

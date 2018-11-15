@@ -6,14 +6,12 @@ from django.db import migrations
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0006_auto_20181109_1739'),
-    ]
+    dependencies = [("api", "0006_auto_20181109_1739")]
 
     operations = [
         migrations.AlterField(
-            model_name='route',
-            name='nodes',
+            model_name="route",
+            name="nodes",
             field=django.contrib.gis.db.models.fields.LineStringField(dim=3, srid=4326),
-        ),
+        )
     ]

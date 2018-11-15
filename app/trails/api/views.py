@@ -54,7 +54,7 @@ class Ordering(NamedTuple):
             return queryset.order_by(reverse + "elevation_gain")
         elif self.field == Travel:
             # we're going to have to download everything (no limit, so make sure we don't select nodes)
-            queryset = queryset.defer('nodes')
+            queryset = queryset.defer("nodes")
             return sorted(
                 queryset, key=lambda route: trailhead_travel_map[route.trailhead]
             )
@@ -135,21 +135,12 @@ class GeneralRequest(serializers.Serializer):
         )
 
 
-def trailheads_near(
-        filter: TrailheadFilter, length: Optional[Tolerance]
-) -> Dict[Trailhead, int]:
+def trailheads_near(trailhead_filter: TrailheadFilter) -> Dict[Trailhead, int]:
     possible_trailheads = Trailhead.trailheads_near(
-        filter.location, max_distance_km=filter.distance_km_filter
+        trailhead_filter.location, max_distance_km=trailhead_filter.distance_km_filter
     )
-    print(possible_trailheads.count())
 
-    if length:
-        possible_trailheads = possible_trailheads.filter(
-            trail_network__trail_length__gt=length.value
-        )
-
-    # possible_trailheads = possible_trailheads.only('id')
-    return get_travel_times_cached(filter.location, possible_trailheads)
+    return get_travel_times_cached(trailhead_filter.location, possible_trailheads)
 
 
 @api_view(["POST"])
@@ -172,19 +163,27 @@ def nearby_trailheads(request):
 
 def find_loops(loop_filter: GeneralFilter):
     possible_trailheads: Dict[Trailhead, int] = trailheads_near(
-        loop_filter.trailhead_filter, loop_filter.length_filter
+        loop_filter.trailhead_filter
     )
     print(f"found {len(possible_trailheads)} potential trailheads")
     min_length, max_length = loop_filter.length_filter.bounds()
-    filtered = Route.objects.defer("osm_rep").filter(
-        trailhead__in=possible_trailheads, length__lt=max_length, length__gt=min_length
-    ).select_related('trailhead__node')
+    filtered = (
+        Route.objects.defer("osm_rep")
+        .filter(
+            trailhead__in=possible_trailheads,
+            length__lt=max_length,
+            length__gt=min_length,
+        )
+        .select_related("trailhead__node")
+    )
 
     if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
-                .extra(select={"delta_len": f"abs(length-{loop_filter.length_filter.value.m})"})
-                .order_by("delta_len")[:5]
+            .extra(
+                select={"delta_len": f"abs(length-{loop_filter.length_filter.value.m})"}
+            )
+            .order_by("delta_len")[:5]
         )
         filtered = Route.objects.filter(id__in=closest_matches)
     if loop_filter.ordering is not None:
@@ -200,49 +199,44 @@ def histogram(request):
 
     filter = request.to_nt(request.validated_data)
     routes, possible_trailheads = find_loops(filter)
-    routes = routes.defer('nodes')
+    routes = routes.defer("nodes")
     num_routes = routes.count()
 
     if num_routes > 0:
         actual_trailheads = {
-            route.trailhead: possible_trailheads[route.trailhead] for route in routes.only('trailhead')
+            route.trailhead: possible_trailheads[route.trailhead]
+            for route in routes.only("trailhead")
         }
-        results = routes.aggregate(Max('elevation_gain'), Min('elevation_gain'), Max('length'), Min('length'))
+        results = routes.aggregate(
+            Max("elevation_gain"), Min("elevation_gain"), Max("length"), Min("length")
+        )
         ret = {
             "num_routes": num_routes,
             "num_trailheads": len(actual_trailheads),
             "elevation": {
-                "max": results['elevation_gain__max'],
-                "min": results['elevation_gain__min'],
+                "max": results["elevation_gain__max"],
+                "min": results["elevation_gain__min"],
             },
             "travel_time": {
                 "max": max(actual_trailheads.values()),
                 "min": min(actual_trailheads.values()),
             },
-            "distance": {
-                "max": results['length__max'],
-                "min": results['length__min'],
-            },
-            "trailheads": actual_trailheads
+            "distance": {"max": results["length__max"], "min": results["length__min"]},
+            "trailheads": actual_trailheads,
         }
         ret = HistogramSerializer(ret, context=dict(unit=filter.units)).data
     else:
         ret = {"num_routes": 0}
-    return Response(
-        {
-            **ret,
-            "units": filter.units.value
-        }, status=200
-    )
+    return Response({**ret, "units": filter.units.value}, status=200)
 
 
 @api_view(["GET"])
 def export_gpx(request):
     id = request.query_params["id"]
     route = Route.objects.get(id=id)
-    download_name = route.name.replace(' ', '-').lower()
-    if download_name == '':
-        download_name = 'route'
+    download_name = route.name.replace(" ", "-").lower()
+    if download_name == "":
+        download_name = "route"
     response = HttpResponse(route.to_gpx(), content_type="application/gpx")
     response["Content-Disposition"] = f"attachment; filename={download_name}.gpx"
     return response
@@ -270,18 +264,23 @@ def top_trails(request):
 def statusz(request):
     return Response({}, status=200)
 
+
 @api_view(["GET"])
 def meta(request):
     num_networks = TrailNetwork.objects.count()
-    network_size = TrailNetwork.objects.aggregate(Sum('trail_length'))['trail_length__sum']
+    network_size = TrailNetwork.objects.aggregate(Sum("trail_length"))[
+        "trail_length__sum"
+    ]
     num_routes = Route.objects.count()
     num_trailheads = Trailhead.objects.count()
-    route_length = Route.objects.aggregate(Sum('length'))['length__sum']
+    route_length = Route.objects.aggregate(Sum("length"))["length__sum"]
 
-    return Response(dict(
-        num_networks=num_networks,
-        total_distance=network_size.mi,
-        num_routes=num_routes,
-        num_trailheads=num_trailheads,
-        route_length=route_length.mi
-    ))
+    return Response(
+        dict(
+            num_networks=num_networks,
+            total_distance=network_size.mi,
+            num_routes=num_routes,
+            num_trailheads=num_trailheads,
+            route_length=route_length.mi,
+        )
+    )

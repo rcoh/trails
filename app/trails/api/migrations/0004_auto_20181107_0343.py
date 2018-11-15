@@ -5,19 +5,15 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0003_auto_20181029_0046'),
-    ]
+    dependencies = [("api", "0003_auto_20181029_0046")]
 
     operations = [
         migrations.AlterField(
-            model_name='node',
-            name='osm_id',
+            model_name="node",
+            name="osm_id",
             field=models.BigIntegerField(primary_key=True, serialize=False),
         ),
         migrations.AlterField(
-            model_name='traveltime',
-            name='osm_id',
-            field=models.BigIntegerField(),
+            model_name="traveltime", name="osm_id", field=models.BigIntegerField()
         ),
     ]

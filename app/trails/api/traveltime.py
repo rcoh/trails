@@ -15,16 +15,16 @@ UNREACHABLE = sys.maxsize
 
 
 def get_travel_times_cached(
-        start_point: Point,
-        target_locations: List[Trailhead],
-        max_minutes=40,
-        force_no_cache=False,
+    start_point: Point,
+    target_locations: List[Trailhead],
+    max_minutes=40,
+    force_no_cache=False,
 ) -> Dict[Trailhead, int]:
     cached_results = TravelCache.objects.filter(
         start_point__distance_lte=(start_point, 1000)
     )
     if isinstance(target_locations, QuerySet):
-        target_locations = target_locations.select_related('node')
+        target_locations = target_locations.select_related("node")
     if cached_results and not force_no_cache:
         points = TravelTime.objects.filter(start_point=cached_results[0]).all()
         points_map = {point.osm_id: point.travel_time_minutes for point in points}
@@ -67,7 +67,7 @@ def get_travel_times_cached(
 
 
 def get_travel_times(
-        start_point: Point, target_locations: List[Trailhead], max_minutes=40
+    start_point: Point, target_locations: List[Trailhead], max_minutes=40
 ) -> Dict[Trailhead, int]:
     max_locations = 2000
     locations = [dict(id="__start", coords=dict(lng=start_point.x, lat=start_point.y))]
@@ -101,19 +101,21 @@ def get_travel_times(
     resp_json = resp.json()
     ret: Dict[Trailhead, int] = {}
     trailhead_map = {trailhead.node.osm_id: trailhead for trailhead in target_locations}
-    if 'error_code' in resp_json:
+    if "error_code" in resp_json:
         # Unsupported region
-        if resp_json['error_code'] == 16:
+        if resp_json["error_code"] == 16:
             for location in target_locations:
-                ret[trailhead_map[location.node.osm_id]] = location.node.distance(start_point).km * 60
+                ret[trailhead_map[location.node.osm_id]] = (
+                    location.node.distance(start_point).km * 60
+                )
     if "results" not in resp_json:
-        print(f'Drive time computation error: {resp_json}')
+        print(f"Drive time computation error: {resp_json}")
         return ret
     for location in resp_json["results"][0]["locations"]:
         osm_id = int(location["id"])
         ret[trailhead_map[osm_id]] = location["properties"][0]["travel_time"]
     for location in resp_json["results"][0]["unreachable"]:
-        print('unreachable', location, start_point)
+        print("unreachable", location, start_point)
         osm_id = int(location)
         ret[trailhead_map[osm_id]] = UNREACHABLE
 

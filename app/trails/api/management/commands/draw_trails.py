@@ -12,16 +12,15 @@ from osm.loader import LocationFilter, OsmiumTrailLoader
 @click.option("--radius", type=click.INT)
 @click.option("--output-file", type=click.STRING, default="out.html")
 def draw_trails(file: Optional[str], center, radius, output_file):
+    location_filter: Optional[LocationFilter] = None
     if center:
         lat, lon = center.split(",")
         if radius is None:
             click.secho("Radius must be specified with lat/lon", fg="red")
             exit(1)
-        location_filter: Optional[LocationFilter] = LocationFilter(
+        location_filter = LocationFilter(
             float(lat), float(lon), radius_km=radius
         )
-    else:
-        location_filter: Optional[LocationFilter] = None
     trail_loader = OsmiumTrailLoader(location_filter)
     trail_loader.apply_file(file, locations=True)
     gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)

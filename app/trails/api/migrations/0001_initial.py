@@ -13,12 +13,10 @@ class Migration(migrations.Migration):
 
     initial = True
 
-    dependencies = []
+    dependencies = [] # type: ignore
 
     if IS_PROD:
-        install_postgis = [
-            CreateExtension('postgis')
-        ]
+        install_postgis = [CreateExtension("postgis")]
     else:
         install_postgis = []
 

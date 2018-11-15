@@ -5,14 +5,12 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
 
-    dependencies = [
-        ('api', '0002_route_osm_rep'),
-    ]
+    dependencies = [("api", "0002_route_osm_rep")]
 
     operations = [
         migrations.AlterField(
-            model_name='route',
-            name='osm_rep',
+            model_name="route",
+            name="osm_rep",
             field=models.BinaryField(default=None, null=True),
-        ),
+        )
     ]

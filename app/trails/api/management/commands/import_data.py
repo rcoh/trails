@@ -5,6 +5,7 @@ import os
 import time
 from multiprocessing.pool import Pool
 from pathlib import Path
+from typing import Optional, Any, Dict, List, Tuple
 
 import djclick as click
 from measurement.measures import Distance
@@ -19,18 +20,22 @@ from osm.loader import (
 )
 import tracemalloc
 
+from osm.model import Subpath
+
 snapshots = []
 
 
 def collect_stats(self):
     snapshots.append(tracemalloc.take_snapshot())
     if len(self.snapshots) > 1:
-        stats = self.snapshots[-1].compare_to(self.snapshots[-2], 'filename')
+        stats = self.snapshots[-1].compare_to(self.snapshots[-2], "filename")
 
         for stat in stats[:10]:
-            print("{} new KiB {} total KiB {} new {} total memory blocks: ".format(stat.size_diff / 1024,
-                                                                                   stat.size / 1024, stat.count_diff,
-                                                                                   stat.count))
+            print(
+                "{} new KiB {} total KiB {} new {} total memory blocks: ".format(
+                    stat.size_diff / 1024, stat.size / 1024, stat.count_diff, stat.count
+                )
+            )
             for line in stat.traceback.format():
                 print(line)
 
@@ -46,8 +51,6 @@ def collect_stats(self):
 )
 @click.option("--pickle-dir", type=click.STRING, default="/trail-data/backups")
 @click.option("--meta-dir", type=click.STRING, default="/trail-data/ingest-metadata")
-@click.option("--recompute-loops", type=click.BOOL, default=True)
-@click.option("--no-cache", type=click.BOOL, default=False)
 @click.argument("file", type=click.Path(exists=True))
 def import_data(
         file: str,
@@ -56,19 +59,16 @@ def import_data(
         parallelism,
         reset,
         pickle_dir,
-        recompute_loops,
         meta_dir,
-        no_cache,
 ):
     start_time = time.time()
+    location_filter: Optional[LocationFilter] = None
     if center:
         lat, lon = center.split(",")
         if radius is None:
             click.secho("Radius must be specified with lat/lon", fg="red")
             exit(1)
         location_filter = LocationFilter(float(lat), float(lon), radius_km=radius)
-    else:
-        location_filter = None
 
     Settings = IngestSettings(
         max_distance=Distance(km=50),
@@ -86,27 +86,9 @@ def import_data(
     else:
         ingest_id = f"unfiltered-{path.name}"
 
-    backup_file = (Path(pickle_dir) / ingest_id).with_suffix(".pickle")
-
     nested_meta_dir = Path(meta_dir) / ingest_id
     os.makedirs(nested_meta_dir, exist_ok=True)
     metadata_file = nested_meta_dir / f"{datetime.datetime.utcnow().isoformat()}.json"
-    # if backup_file.exists() and not no_cache:
-    #    result = pickle.load(open(backup_file, "rb"))
-    #    if recompute_loops:
-    #        loader.recompute_loops(result, parallelism)
-    #        result = loader.result()
-    # else:
-    #    loader.ingest_file(path, parallelism=parallelism)
-    #    result = loader.result()
-    #    with open(backup_file, "wb") as f:
-    #        pickler = pickle.Pickler(f)
-    #        pickler.fast = True
-    #        pickler.dump(result)
-    ingest_time = time.time()
-    # click.secho(
-    #    f"OSM data [loops: {result.total_loops()}, trail networks: {len(result.loops.keys())}] ingested in {ingest_time-start_time} seconds"
-    # )
 
     if reset:
         # Need to delete everything before import TODO
@@ -117,7 +99,7 @@ def import_data(
     TravelCache.objects.all().delete()
 
     p = Pool(parallelism)
-    metadata = {}
+    metadata: Dict[str, Dict[int, Dict[Any, Any]]] = {}
     routes_import = 0
     trailheads_imported = 0
     for network_result in loader.ingest_file(path, parallelism=parallelism):
@@ -128,7 +110,7 @@ def import_data(
         tn = TrailNetwork.from_osm_trail_network(trail_network_osm)
         TrailNetwork.objects.filter(unique_id=tn.unique_id).delete()
         tn.save()
-        routes_for_network = []
+        routes_for_network: List[Tuple[Subpath, TrailNetwork, Trailhead]] = []
         metadata[tn.unique_id] = {}
         for trailhead_osm, trailhead_result in trailhead_dict.items():
             try:
@@ -137,7 +119,9 @@ def import_data(
                 n = Node.from_osm_node(trailhead_osm.node)
                 n.save()
                 Trailhead.objects.filter(node__osm_id=n.osm_id).delete()
-                trailhead = Trailhead(trail_network=tn, node=n, name=trailhead_osm.name[:32])
+                trailhead = Trailhead(
+                    trail_network=tn, node=n, name=trailhead_osm.name[:32]
+                )
                 if trailhead_result.loops:
                     trailheads_imported += 1
                     trailhead.save()
@@ -148,7 +132,7 @@ def import_data(
                     trailhead_osm.node.id
                 ] = trailhead_result.meta._asdict()
             except Exception as ex:
-                print('Error importing trailhead', ex)
+                print("Error importing trailhead", ex)
 
         if len(routes_for_network) > 0:
             routes = util.pmap(routes_for_network, Route.from_subpath, p)

@@ -18,9 +18,9 @@ def srtm3_tile_ilonlat(lon, lat):
 
 def get_elevation(lat, lon):
     index_lon, index_lat = srtm3_tile_ilonlat(lon, lat)
-    tile_file = f'srtm_{index_lon:02d}_{index_lat:02d}.tif'
+    tile_file = f"srtm_{index_lon:02d}_{index_lat:02d}.tif"
     coords = ((lon, lat), (lon, lat))
     elev = next(rasterio.open(tile_file).sample(coords))[0]
     if elev == -32768:
-        raise Exception('Elevation undefined at point')
+        raise Exception("Elevation undefined at point")
     return elev

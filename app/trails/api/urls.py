@@ -9,10 +9,10 @@ urlpatterns = [
     path("trails/", views.top_trails),
     path("export/", views.export_gpx),
     path("statusz", views.statusz),
-    path("meta/", views.meta)
+    path("meta/", views.meta),
 ]
 
-#if settings.DEBUG:
+# if settings.DEBUG:
 #    import debug_toolbar
 #    urlpatterns = [
 #        path('__debug__/', include(debug_toolbar.urls)),

@@ -1,4 +1,5 @@
 from django.db import connection, transaction
+
 cursor = connection.cursor()
 
 import djclick as click

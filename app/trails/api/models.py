@@ -45,9 +45,7 @@ class Node(models.Model):
 
     def distance(self, other: "Point") -> Distance:
         return Distance(
-            m=geopy.distance.great_circle(
-                (self.lat, self.lon), (other.y, other.x)
-            ).m
+            m=geopy.distance.great_circle((self.lat, self.lon), (other.y, other.x)).m
         )
 
     @classmethod
@@ -73,8 +71,8 @@ class Trailhead(models.Model):
             Trailhead.objects.filter(
                 node__point__dwithin=(pnt, D(m=max_distance_km * 1000))
             )
-                .annotate(distance=GisDistance("node__point", pnt))
-                .order_by("distance")
+            .annotate(distance=GisDistance("node__point", pnt))
+            .order_by("distance")
         )
 
 
@@ -102,10 +100,10 @@ class Route(models.Model):
 
     @classmethod
     def from_subpath(
-            cls,
-            subpath: osm.model.Subpath,
-            trail_network: TrailNetwork,
-            trailhead: Trailhead,
+        cls,
+        subpath: osm.model.Subpath,
+        trail_network: TrailNetwork,
+        trailhead: Trailhead,
     ):
         elev = subpath.elevation_change()
         elevations = osm.model.ElevationChange.elevations(subpath.nodes())
@@ -115,17 +113,27 @@ class Route(models.Model):
             elevation_gain=Distance(m=elev.gain),
             elevation_loss=Distance(m=elev.loss),
             is_loop=subpath.is_complete(),
-            nodes=LineString([Point(node.lat, node.lon, elev) for (node, elev) in zip(subpath.nodes(), elevations)]),
+            nodes=LineString(
+                [
+                    Point(node.lat, node.lon, elev)
+                    for (node, elev) in zip(subpath.nodes(), elevations)
+                ]
+            ),
             trailhead=trailhead,
             quality=subpath.quality(),
             osm_rep=pickle.dumps(subpath),
-            name=subpath.name()
+            name=subpath.name(),
         )
 
     def add_elevations(self):
-        osm_nodes = [osm.model.Node(id=-1, lon=node[1], lat=node[0]) for node in self.nodes]
+        osm_nodes = [
+            osm.model.Node(id=-1, lon=node[1], lat=node[0]) for node in self.nodes
+        ]
         elevations = osm.model.ElevationChange.elevations(osm_nodes)
-        new_nodes = [Point(node[0], node[1], elevation) for node, elevation in zip(self.nodes, elevations)]
+        new_nodes = [
+            Point(node[0], node[1], elevation)
+            for node, elevation in zip(self.nodes, elevations)
+        ]
         self.nodes = LineString(new_nodes)
         return True
 

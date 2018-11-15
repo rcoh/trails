@@ -28,7 +28,7 @@ def window(iterable, size=2):
 
 
 def pmap(iter, func, pool: Pool, chunksize=1):
-    if pool._processes == 1:
+    if pool._processes == 1:  # type: ignore
 
         def splat(arg_tup):
             return func(*arg_tup)
