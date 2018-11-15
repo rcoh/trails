@@ -223,6 +223,7 @@ def histogram(request):
                 "max": results['length__max'],
                 "min": results['length__min'],
             },
+            "trailheads": actual_trailheads
         }
         ret = HistogramSerializer(ret, context=dict(unit=filter.units)).data
     else:

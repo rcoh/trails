@@ -1,14 +1,10 @@
 import React, { Component } from "react";
-import { compose, withProps, lifecycle } from "recompose";
-import PropTypes from "prop-types";
 import { Button } from "evergreen-ui";
 import { ResultTable } from "./ResultTable";
 import "react-table/react-table.css";
 import "./App.css";
 import Geosuggest from "react-geosuggest";
-import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
 import "rc-slider/assets/index.css";
-import { UnitSystems } from "./Util";
 import { loadAPI } from "./Api";
 import {
   SegmentedControl,
@@ -19,22 +15,21 @@ import {
   Spinner
 } from "evergreen-ui";
 import ElevationPlot from "./ElevationProfile";
+import ResultHistogram from "./ResultHistogram";
+import { DefaultPadding } from "./Styles";
+import { TrailMap } from "./TrailMap";
 
-/*global google*/
-// Select address
-// Show trailheads on map
-//
-
-
-const defaultPadding = {
-  margin: ".5em"
+const defaultLocation = () => {
+  if (process["NODE_ENV"] === "development") {
+    return { lat: 37.47463, lng: -122.23131 };
+  } else return {};
 };
 
 class App extends Component {
   constructor(props) {
     super(props);
     this.state = {
-      location: { lat: 37.47463, lng: -122.23131 },
+      location: defaultLocation(),
       distance: 5,
       unitSystem: "imperial"
     };
@@ -134,8 +129,8 @@ class App extends Component {
             alignItems="center"
             {...rowStyle}
           >
-            <Text {...defaultPadding}>Starting from:</Text>
-            <Pane {...defaultPadding}>
+            <Text {...DefaultPadding}>Starting from:</Text>
+            <Pane {...DefaultPadding}>
               <Geosuggest
                 onSuggestSelect={this.onSuggestSelect}
                 renderSuggestItem={suggest => <Text>{suggest.label}</Text>}
@@ -149,16 +144,16 @@ class App extends Component {
             flexWrap="wrap"
             {...rowStyle}
           >
-            <Text {...defaultPadding}>I want to hike/run about</Text>
+            <Text {...DefaultPadding}>I want to hike/run about</Text>
             <Pane display="flex" alignItems="center">
               <TextInput
-                {...defaultPadding}
+                {...DefaultPadding}
                 value={this.state.distance}
                 width="3em"
                 onChange={this.updateDistance}
               />
               <SegmentedControl
-                {...defaultPadding}
+                {...DefaultPadding}
                 width={150}
                 options={unitOptions}
                 value={unit}
@@ -231,119 +226,13 @@ class App extends Component {
   }
 }
 
-
-const minMax = PropTypes.shape({
-  min: PropTypes.number.isRequired,
-  max: PropTypes.number.isRequired
-});
-
-const minimizeElevation = { field: "elevation", asc: true };
-const maximizeElevation = { field: "elevation", asc: false };
-const minimizeTravelTime = { field: "travel", asc: true };
-
 const NoResults = (
   <Card>
-    <Text>Sorry, there aren't any results matching your search. TrailsTo.run currently only has data from the United States.</Text>
+    <Text>
+      Sorry, there aren't any results matching your search. TrailsTo.run
+      currently only has data from the United States.
+    </Text>
   </Card>
 );
-class ResultHistogram extends Component {
-  render() {
-    const u = UnitSystems[this.props.units];
-    return (
-      <Pane
-        display="flex"
-        alignItems="center"
-        flexWrap="wrap"
-        justifyContent="center"
-      >
-        <Button
-          {...defaultPadding}
-          onClick={() => this.props.select(minimizeElevation)}
-        >
-          Flattest ({this.props.elevation.min.toFixed(0)} {u.height.long})
-        </Button>
-        <Button
-          {...defaultPadding}
-          onClick={() => this.props.select(maximizeElevation)}
-        >
-          Hilliest ({this.props.elevation.max.toFixed(0)} {u.height.long})
-        </Button>
-        <Button
-          {...defaultPadding}
-          onClick={() => this.props.select(minimizeTravelTime)}
-        >
-          Closest ({(this.props.travel_time.min / 60).toFixed(0)} minutes)
-        </Button>
-      </Pane>
-    );
-  }
-}
-
-ResultHistogram.propTypes = {
-  elevation: minMax.isRequired,
-  distance: minMax.isRequired,
-  travel_time: minMax.isRequired,
-  select: PropTypes.func.isRequired,
-  units: PropTypes.string.isRequired
-};
-
-const TrailMap = compose(
-  withProps({
-    loadingElement: <div style={{ height: `100%` }} />,
-    containerElement: <div style={{ height: `400px` }} />,
-    mapElement: <div style={{ height: `100%` }} />
-  }),
-  lifecycle({
-    componentWillMount() {
-      const that = this;
-      this.setState({
-        onMapMounted: ref => {
-          that.setState({ mapRef: ref });
-        }
-      });
-    },
-    componentDidUpdate() {
-      const bounds = new google.maps.LatLngBounds();
-      if (this.props.trail) {
-        this.props.trail.nodes.forEach(({ lat, lon }) => {
-          const point = { lat, lng: lon };
-          bounds.extend(point);
-        });
-        window.setTimeout(() => this.state.mapRef.fitBounds(bounds), 100);
-      }
-    }
-  }),
-  withGoogleMap
-)(props => {
-  let trail;
-  let marker;
-  if (props.trail) {
-    const path = props.trail.nodes.map(({ lat, lon }) => {
-      const point = { lat, lng: lon };
-      return point;
-    });
-    trail = <Polyline path={path} options={{ strokeOpacity: 0.9 }} />;
-    const th_node = props.trail.trailhead.node;
-    marker = (
-      <Marker
-        position={{ lat: th_node.lat, lng: th_node.lon }}
-        title={`OSM_ID: ${th_node.osm_id}`}
-      />
-    );
-  }
-
-  const map = (
-    <GoogleMap
-      ref={props.onMapMounted}
-      defaultZoom={8}
-      defaultCenter={{ lat: -34.397, lng: 150.644 }}
-    >
-      {trail}
-      {marker}
-    </GoogleMap>
-  );
-
-  return map;
-});
 
 export default App;

@@ -107,6 +107,7 @@ class HistogramSerializer(serializers.Serializer):
     elevation = RangeField(child=HeightSerializer())
     distance = RangeField(child=DistanceSerializer())
     travel_time = RangeField(child=serializers.IntegerField())
+    trailheads = TrailheadSerializer(many=True)
 
 
 class RouteSerializer(serializers.ModelSerializer):
