@@ -11,7 +11,7 @@ services:
     - "8000:8000"
     volumes:
     - ./trails:/app
-    - /home/russell/code/trails-data/:/trail-data/
+    - ../../trails-data/:/trail-data/
     build: .
     env_file:
     - local.env
