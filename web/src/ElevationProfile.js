@@ -15,23 +15,13 @@ import GreatCircle from "great-circle";
 export default function ElevationPlot(props) {
   let dist = 0;
   let data = [];
-  let prev;
   if (props.trail == null) {
       return <span></span>;
   }
   const nodes = props.trail.nodes;
   let nonZero = false;
   for (let i = 0; i < nodes.length; i++) {
-    if (prev) {
-      dist += GreatCircle.distance(
-        prev.lat,
-        prev.lon,
-        nodes[i].lat,
-        nodes[i].lon
-      );
-    }
-    prev = nodes[i];
-    data.push({ x: dist, y: nodes[i].elevation });
+    data.push({ x: nodes[i].distance, y: nodes[i].elevation });
     if (nodes[i].elevation !== 0) {
         nonZero = true;
     }
@@ -43,7 +33,7 @@ export default function ElevationPlot(props) {
     <FlexibleWidthXYPlot height={200}>
       <VerticalGridLines tickTotal={dist}/>
       <HorizontalGridLines />
-      <XAxis tickTotal={dist}/>
+      <XAxis tickTotal={props.trail.length}/>
       <YAxis />
       <AreaSeries
         className="area-series-example"

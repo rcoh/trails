@@ -22,7 +22,7 @@ DB_DIR = "/db/"
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# TODO: generate from env
+# TODO: if we ever add the ability to login or anything, this needs to actually be secret
 SECRET_KEY = "d=#4bn3nq-ltca9ed^^@!)z7io6c2onv0stwvk2kjpz=+@pb@@"
 
 # SECURITY WARNING: don't run with debug turned on in production!

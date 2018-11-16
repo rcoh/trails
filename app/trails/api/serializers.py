@@ -1,12 +1,14 @@
 import copy
 from enum import Enum
 
+import geopy.distance
 from measurement.measures import Distance
 from rest_framework import serializers
 from rest_framework.fields import empty, _UnvalidatedField
 from rest_framework.serializers import ListSerializer
 
 from api.models import Route, Trailhead, Node
+from osm.util import window
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -67,24 +69,33 @@ class HeightSerializer(serializers.Serializer):
 class DistanceSerializer(serializers.Serializer):
     def to_representation(self, instance):
         if self.context["unit"] == UnitSystem.Metric:
-            return united(instance, "km", 1)
+            return united(instance, "km", self.context.get('precision', 1))
         elif self.context["unit"] == UnitSystem.Imperial:
-            return united(instance, "mi", 1)
+            return united(instance, "mi", self.context.get('precision', 1))
         else:
             raise Exception()
 
 
 class NodeListSerializer(serializers.Serializer):
     def to_representation(self, instance):
-        ser = HeightSerializer(context=self.context)
-        return [
-            {
+        h_ser = HeightSerializer(context=self.context)
+        d_ser = DistanceSerializer(context={**self.context, 'precision': 10})
+        dist = Distance(m=0)
+        res = []
+        prev = None
+        for (lat, lon, elevation) in instance:
+            if prev is not None:
+                dist += Distance(m=geopy.distance.great_circle(prev, (lat, lon)).m)
+
+            prev = (lat, lon)
+
+            res.append({
                 "lat": lat,
                 "lon": lon,
-                "elevation": ser.to_representation(Distance(m=elevation)),
-            }
-            for (lat, lon, elevation) in instance
-        ]
+                "elevation": h_ser.to_representation(Distance(m=elevation)),
+                "distance": d_ser.to_representation(dist)
+            })
+        return res
 
 
 class RangeField(serializers.Serializer):

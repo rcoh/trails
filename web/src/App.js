@@ -21,7 +21,7 @@ import { TrailMap } from "./TrailMap";
 
 const defaultLocation = () => {
   // Set a default value when running locally for easy testing
-  if (process["NODE_ENV"] === "development") {
+  if (process.env["NODE_ENV"] === "development") {
     return { lat: 37.47463, lng: -122.23131 };
   } else return {};
 };
