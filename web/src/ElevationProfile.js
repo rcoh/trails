@@ -10,8 +10,6 @@ import {
 } from "react-vis";
 import '../node_modules/react-vis/dist/style.css';
 
-import GreatCircle from "great-circle";
-
 export default function ElevationPlot(props) {
   let dist = 0;
   let data = [];

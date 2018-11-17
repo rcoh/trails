@@ -6,6 +6,8 @@ services:
     image: mdillon/postgis
     env_file:
     - local.env
+    volumes:
+    - ./trails-db/:/var/lib/postgresql/data
   app:
     ports:
     - "8000:8000"

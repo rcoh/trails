@@ -5,10 +5,8 @@ import geopy.distance
 from measurement.measures import Distance
 from rest_framework import serializers
 from rest_framework.fields import empty, _UnvalidatedField
-from rest_framework.serializers import ListSerializer
 
 from api.models import Route, Trailhead, Node
-from osm.util import window
 
 
 class NodeSerializer(serializers.ModelSerializer):
@@ -50,10 +48,6 @@ class UnitSystem(Enum):
 
 def united(obj, unit, precision):
     return round(getattr(obj, unit), precision)
-    # return {
-    #    "unit": unit,
-    #    "value":
-    # }
 
 
 class HeightSerializer(serializers.Serializer):
