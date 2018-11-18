@@ -1,6 +1,6 @@
 import math
 
-# import rasterio
+import rasterio
 
 from trails.settings import SRTMV4_BASE_DIR
 

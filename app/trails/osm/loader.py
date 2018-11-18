@@ -6,7 +6,6 @@ from multiprocessing.pool import Pool
 from pathlib import Path
 from typing import List, Dict, NamedTuple, Iterator, Optional, Set, Tuple
 
-import collections
 import geopy.distance
 import networkx as nx
 import osmium as o
@@ -137,7 +136,6 @@ def worth_keeping(loop: Subpath):
 
 
 def proc_network(network, settings) -> Tuple[TrailNetwork, Dict[Trailhead, TrailheadResult]]:
-    tqdm.write(f"Processing trail network {network}")
     ret: Dict[Trailhead, TrailheadResult] = {}
     for trailhead in network.trailheads:
         start_time = time.time()
@@ -247,9 +245,9 @@ class OSMIngestor:
             (network, self.ingest_settings) for network in self.trail_networks()
         ]
 
-        results_iter = util.pmap(networks_to_process, proc_network, self.pool)
+        results_iter = tqdm(util.pmap(networks_to_process, proc_network, self.pool), total=len(networks_to_process))
 
-        for (network, result) in tqdm(results_iter, total=len(networks_to_process)):
+        for (network, result) in results_iter:
             yield NetworkResult(network, result)
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
@@ -364,7 +362,7 @@ def find_loops_from_root(
     stop_searching_thresh = min(max(1, int(trail_network.total_length().km / 4)), 20)
     exit_thresh = min(max(int(trail_network.total_length().km / 2), 1), 20)
     max_length_target = min(max_distance, settings.stop_searching_cutoff)
-    length_target_met = False
+    length_target_met = True
     loops_yielded = 0
     start_time = time.time()
 
