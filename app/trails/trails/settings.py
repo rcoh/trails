@@ -59,7 +59,7 @@ else:
             "NAME": os.environ.get("POSTGRES_DB"),
             "USER": os.environ.get("POSTGRES_USER"),
             "PASSWORD": os.environ.get("POSTGRES_PASSWORD"),
-            "HOST": "db",
+            "HOST": os.environ.get("DB_HOST"),
             "POST": "5432",
         }
     }

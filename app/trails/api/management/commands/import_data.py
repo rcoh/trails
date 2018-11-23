@@ -136,7 +136,6 @@ def import_data(
 
         if len(routes_for_network) > 0:
             routes = util.pmap(routes_for_network, Route.from_subpath, p)
-            print(f"Creating routes {len(routes)}")
             Route.objects.bulk_create(routes)
             routes_import += len(routes)
 

@@ -207,6 +207,7 @@ def histogram(request):
             route.trailhead: possible_trailheads[route.trailhead]
             for route in routes.only("trailhead")
         }
+        routes = routes.filter(trailhead__in=actual_trailheads)
         results = routes.aggregate(
             Max("elevation_gain"), Min("elevation_gain"), Max("length"), Min("length")
         )

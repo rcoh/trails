@@ -90,11 +90,14 @@ class ElevationChange(NamedTuple):
                 gpx.smooth(vertical=True)
 
             return gpx_segment
-        except Exception as ex:
-            raise
-            time.sleep(1)
-            print("error while adding elevations", ex)
-            return ElevationChange.to_elevated_gps(nodes, retries - 1)
+        except Exception:
+            for point in gpx_segment.points:
+                point.elevation = -1
+            return gpx_segment
+            # raise
+            #time.sleep(1)
+            # print("error while adding elevations", ex)
+            # return ElevationChange.to_elevated_gps(nodes, retries - 1)
 
     @classmethod
     def elevations(cls, nodes: Iterator[Node]):
