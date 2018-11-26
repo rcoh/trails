@@ -1,38 +1,77 @@
-import  React, { Component } from "react";
+import React, { Component } from "react";
 import {
   BrowserRouter as Router,
   Route,
   Switch,
-  NavLink,
+  Link,
   withRouter
 } from "react-router-dom";
-import { Pane } from "evergreen-ui";
+import { Pane, Text, Strong } from "evergreen-ui";
 import FindTrails from "./FindTrails";
+import About from "./About";
 
-const Blerp = () => <h2>Hello</h2>;
-const Index = () => <FindTrails />;
-const About = () => <h2>About</h2>;
+const IndexComponent = () => <FindTrails />;
+const AboutComponent = () => <About />;
 const Users = () => <h2>Users</h2>;
 
 class AppRouter extends Component {
   render() {
-    return <Router>
-      <div>
-        <div key="nav" class="nav">
-          <NavLink to="/search">Search</NavLink>
-          <NavLink to="/explore">Explore</NavLink>
-        </div >
-        <div key="content">
-          <Switch>
-            <Route path="/" exact component={Index} />
-            <Route path="/search" component={Index} />
-            <Route path="/explore" component={About} />
-            <Route component={Users} />
-          </Switch>
+    return (
+      <Router>
+        <div>
+          <RoutedNavBar />
+          <div key="content" className="content">
+            <Switch>
+              <Route path="/" exact component={IndexComponent} />
+              <Route path="/search" component={IndexComponent} />
+              <Route path="/about" component={AboutComponent} />
+              <Route component={Users} />
+            </Switch>
+          </div>
         </div>
-      </div>
-    </Router>;
+      </Router>
+    );
   }
 }
 
+class NavBar extends Component {
+  render() {
+    const navigation = [
+      { url: "/search", text: "Search" },
+      { url: "/about", text: "About" }
+    ];
+    const links = navigation.map(nav => {
+      const active = nav.url === this.props.location.pathname || nav.url === "/search" && this.props.location.pathname === "/";
+      if (active) {
+        return (
+          <Link key={nav.url} to={nav.url} className="nav-item">
+            <Strong>{nav.text}</Strong>
+          </Link>
+        );
+      } else {
+        return (
+          <Link key={nav.url} to={nav.url} className="nav-item">
+            <Text>{nav.text}</Text>
+          </Link>
+        );
+      }
+    });
+    return (
+      <Pane
+        location={this.props.location}
+        height="40px"
+        marginLeft="-10px"
+        marginTop="-10px"
+        marginRight="-10px"
+        background="blueTint"
+        display="flex"
+        alignItems="center"
+      >
+        {links}
+      </Pane>
+    );
+  }
+}
+
+const RoutedNavBar = withRouter(NavBar);
 export default AppRouter;

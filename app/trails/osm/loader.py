@@ -14,7 +14,7 @@ from tqdm import tqdm
 
 from osm import util
 from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node
-from osm.util import verify_identical_nodes, window
+from osm.util import window
 
 TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
 INACCESSIBLE = {"service"}
@@ -38,7 +38,6 @@ def drivable(way):
         return False
 
     accessible = way.tags.get("access") in ["yes", "permissive", None]
-    explicitly_accessible = way.tags.get("access") in ["yes", "permissive"]
     service_road = (
         way.tags.get("highway") == "service"
         and way.tags.get("service") != "parking_aisle"
