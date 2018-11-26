@@ -38,7 +38,7 @@ class NavBar extends Component {
   render() {
     const navigation = [
       { url: "/search", text: "Search" },
-      { url: "/about", text: "About" }
+      { url: "/about", text: "About" },
     ];
     const links = navigation.map(nav => {
       const active = nav.url === this.props.location.pathname || nav.url === "/search" && this.props.location.pathname === "/";
@@ -68,6 +68,7 @@ class NavBar extends Component {
         alignItems="center"
       >
         {links}
+        <a className="nav-item" href="https://ko-fi.com/Q5Q6MIB5"><Text>Support TrailsTo.Run</Text></a>
       </Pane>
     );
   }
