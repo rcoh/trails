@@ -1,3 +1,19 @@
+.content {
+  /*border-radius: 1em;
+  background-color: #eee;
+  height: 100%;*/
+  padding-top: 10px;
+}
+
+.nav-item {
+  padding: 10px;
+  text-decoration: none;
+}
+
+.active {
+  text-decoration: none;
+  font-weight: bold !important;
+}
 /**
  * The geosuggest module
  * NOTE: duplicated font-sizes' are for browsers which don't support rem (only IE 8)
