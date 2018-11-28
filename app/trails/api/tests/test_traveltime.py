@@ -1,9 +1,11 @@
+import pytest
+
 from api.models import Trailhead, Node, Point
 from api.traveltime import get_travel_times, get_travel_times_cached
 from osm.model import Node as ONode
 
-
-def test_traveltime_api(requests_mock, transactional_db):
+@pytest.mark.django_db
+def test_traveltime_api(requests_mock):
     mock_response = '{"results": [{"search_id": "main", "locations": [{"id": "65356597", "properties": [{"travel_time": 1755}]}, {"id": "2557114842", "properties": [{"travel_time": 1098}]}], "unreachable": []}]}'
     requests_mock.post(
         "https://api.traveltimeapp.com/v4/time-filter", text=mock_response

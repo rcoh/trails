@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from gmplot import gmplot
+# from gmplot import gmplot
 from measurement.measures import Distance
 from pytest import fixture
 
@@ -87,16 +87,16 @@ def test_trail_network(test_data, huddart_trails):
     assert len(matching) == 1
     huddart = matching[0]
     assert huddart.total_length_km() == pytest.approx(58.38, rel=0.1)
-    gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
+    #gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
 
-    # Node in the center of the park on a service road
-    for trailhead in huddart.trailheads:
-        print("marking", trailhead)
-        gmap.marker(trailhead.node.lat, trailhead.node.lon, title=trailhead.node.id)
+    ## Node in the center of the park on a service road
+    #for trailhead in huddart.trailheads:
+    #    print("marking", trailhead)
+    #    gmap.marker(trailhead.node.lat, trailhead.node.lon, title=trailhead.node.id)
 
-    for trail in huddart.trail_segments():
-        trail.draw(gmap)
-    gmap.draw("out.html")
+    #for trail in huddart.trail_segments():
+    #    trail.draw(gmap)
+    #gmap.draw("out.html")
     trailhead_ids = [trailhead.node.id for trailhead in huddart.trailheads]
 
     # On a "service" road that is accessible [access=permissive]

@@ -137,7 +137,7 @@ class Route(models.Model):
         self.nodes = LineString(new_nodes)
         return True
 
-    def to_gpx_segment(self):
+    def to_gpx(self):
         nodes = self.nodes
         gpx = gpxpy.gpx.GPX()
 
@@ -154,7 +154,7 @@ class Route(models.Model):
             gpx_segment.points.append(
                 gpxpy.gpx.GPXTrackPoint(latitude=node[0], longitude=node[1])
             )
-        return gpx_segment
+        return gpx
 
-    def to_gpx(self):
-        return self.to_gpx_segment().to_xml()
+    def export_gpx(self):
+        return self.to_gpx().to_xml()

@@ -1,4 +1,4 @@
-from typing import Optional, NamedTuple, Dict
+from typing import Optional, NamedTuple, Dict, Any
 
 from django.contrib.gis.geos import Point
 from django.db.models import Max, Min, Sum
@@ -114,21 +114,27 @@ class GeneralRequest(serializers.Serializer):
     elevation = ToleranceFilter(measurement=Measurement.Height, required=False)
     ordering = OrderingSerializer(required=False)
 
-    def to_nt(self, validated_data):
-        if validated_data.get("ordering"):
-            ordering = self.fields["ordering"].to_nt(validated_data["ordering"])
+    def or_none(self, field: str, validated_data: Dict[str, Any], **extra):
+        if validated_data.get(field):
+            return self.fields[field].to_nt(validated_data[field], **extra)
         else:
-            ordering = None
+            return None
 
+    def to_nt(self, validated_data):
+        ordering = self.or_none("ordering", validated_data)
         if validated_data["units"] == "metric":
             units = UnitSystem.Metric
         else:
             units = UnitSystem.Imperial
+        length_filter = self.or_none("length_filter", validated_data)
+        elevation_filter = self.or_none("elevation_filter", validated_data, units=units)
+
+
         return GeneralFilter(
             trailhead_filter=self.fields["location_filter"].to_nt(
                 validated_data["location_filter"]
             ),
-            elevation_filter=None,
+            elevation_filter=elevation_filter,
             length_filter=self.fields["length"].to_nt(validated_data["length"], units),
             ordering=ordering,
             units=units,
@@ -169,21 +175,21 @@ def find_loops(loop_filter: GeneralFilter):
     min_length, max_length = loop_filter.length_filter.bounds()
     filtered = (
         Route.objects.defer("osm_rep")
-        .filter(
+            .filter(
             trailhead__in=possible_trailheads,
             length__lt=max_length,
             length__gt=min_length,
         )
-        .select_related("trailhead__node")
+            .select_related("trailhead__node")
     )
 
     if filtered.count() < 5:
         closest_matches = (
             Route.objects.filter(trailhead__in=possible_trailheads)
-            .extra(
+                .extra(
                 select={"delta_len": f"abs(length-{loop_filter.length_filter.value.m})"}
             )
-            .order_by("delta_len")[:5]
+                .order_by("delta_len")[:5]
         )
         filtered = Route.objects.filter(id__in=closest_matches)
     if loop_filter.ordering is not None:
@@ -238,7 +244,7 @@ def export_gpx(request):
     download_name = route.name.replace(" ", "-").lower()
     if download_name == "":
         download_name = "route"
-    response = HttpResponse(route.to_gpx(), content_type="application/gpx")
+    response = HttpResponse(route.export_gpx(), content_type="application/gpx")
     response["Content-Disposition"] = f"attachment; filename={download_name}.gpx"
     return response
 
