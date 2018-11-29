@@ -62,7 +62,7 @@ class NavBar extends Component {
         height="40px"
         marginLeft="-10px"
         marginTop="-10px"
-        marginRight="-10px"
+        marginRight="-8px"
         background="blueTint"
         display="flex"
         alignItems="center"

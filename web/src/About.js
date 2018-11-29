@@ -1,6 +1,5 @@
 import React, { Component } from "react";
 import { Paragraph, Heading, Pane, Card } from "evergreen-ui";
-import FindTrails from "./FindTrails";
 
 export default class About extends Component {
   render() {

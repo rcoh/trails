@@ -4,6 +4,7 @@ import { ResultTable } from "./ResultTable";
 import "react-table/react-table.css";
 import "./App.css";
 import Geosuggest from "react-geosuggest";
+import { LocationSelect } from "./LocationSelect";
 import "rc-slider/assets/index.css";
 import { loadAPI } from "./Api";
 import {
@@ -16,7 +17,7 @@ import {
 } from "evergreen-ui";
 import ElevationPlot from "./ElevationProfile";
 import ResultHistogram from "./ResultHistogram";
-import { DefaultPadding } from "./Styles";
+import { DefaultPadding, RowStyle } from "./Styles";
 import { TrailMap } from "./TrailMap";
 
 const defaultLocation = () => {
@@ -119,39 +120,16 @@ class FindTrails extends Component {
       { label: "miles", value: "imperial" },
       { label: "kilometers", value: "metric" }
     ];
-    const rowStyle = {
-      marginTop: "3px",
-      marginBottom: "3px"
-    };
     return (
       // Outer level container
       <Pane display="flex" alignItems="center" flexDirection="column">
-        {/*<Pane
-          display="flex"
-          justifyContent="space-between"
-          flexDirection="column"
-        >*/}
-          <Pane
-            display="flex"
-            flexWrap="wrap"
-            justifyContent="center"
-            alignItems="center"
-            {...rowStyle}
-          >
-            <Text {...DefaultPadding}>Starting from:</Text>
-            <Pane {...DefaultPadding}>
-              <Geosuggest
-                onSuggestSelect={this.onSuggestSelect}
-                renderSuggestItem={suggest => <Text>{suggest.label}</Text>}
-              />
-            </Pane>
-          </Pane>
+          <LocationSelect onSelect={this.onSuggestSelect} />
           <Pane
             display="flex"
             justifyContent="space-around"
             alignItems="center"
             flexWrap="wrap"
-            {...rowStyle}
+            {...RowStyle}
           >
             <Text {...DefaultPadding}>I want to hike/run about</Text>
             <Pane display="flex" alignItems="center">
@@ -186,7 +164,6 @@ class FindTrails extends Component {
               </Pane>
             </Button>
           </Pane>
-        {/*</Pane>*/}
         {histogram}
         <hr />
         {spinner}
