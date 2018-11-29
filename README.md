@@ -32,9 +32,6 @@ docker-compose up
 # Exec into the docker container
 docker exec -it app_app_1 bash
 
-# Enter the pipenv (TODO: install packages directly on docker)
-pipenv shell
-
 # Run the DB migrations
 python manage.py migrate
 ```
