@@ -15,7 +15,7 @@ from api.serializers import (
     UnitSystem,
     HistogramSerializer,
     Measurement,
-)
+    DistanceSerializer)
 from api.traveltime import get_travel_times_cached
 
 
@@ -63,7 +63,7 @@ class Ordering(NamedTuple):
 class GeneralFilter(NamedTuple):
     units: UnitSystem
     trailhead_filter: TrailheadFilter
-    length_filter: Tolerance
+    length_filter: Optional[Tolerance]
     elevation_filter: Optional[Tolerance]
     ordering: Optional[Ordering]
 
@@ -110,7 +110,7 @@ class OrderingSerializer(serializers.Serializer):
 class GeneralRequest(serializers.Serializer):
     units = serializers.ChoiceField(["metric", "imperial"])
     location_filter = NearbyTrailheadRequest()
-    length = ToleranceFilter(measurement=Measurement.Distance)
+    length = ToleranceFilter(measurement=Measurement.Distance, required=False)
     elevation = ToleranceFilter(measurement=Measurement.Height, required=False)
     ordering = OrderingSerializer(required=False)
 
@@ -126,16 +126,15 @@ class GeneralRequest(serializers.Serializer):
             units = UnitSystem.Metric
         else:
             units = UnitSystem.Imperial
-        length_filter = self.or_none("length_filter", validated_data)
-        elevation_filter = self.or_none("elevation_filter", validated_data, units=units)
-
+        length_filter = self.or_none("length", validated_data, units=units)
+        elevation_filter = self.or_none("elevation", validated_data, units=units)
 
         return GeneralFilter(
             trailhead_filter=self.fields["location_filter"].to_nt(
                 validated_data["location_filter"]
             ),
             elevation_filter=elevation_filter,
-            length_filter=self.fields["length"].to_nt(validated_data["length"], units),
+            length_filter=length_filter,
             ordering=ordering,
             units=units,
         )
@@ -151,16 +150,21 @@ def trailheads_near(trailhead_filter: TrailheadFilter) -> Dict[Trailhead, int]:
 
 @api_view(["POST"])
 def nearby_trailheads(request):
-    request = NearbyTrailheadRequest(data=request.data)
+    request = GeneralRequest(data=request.data)
     if not request.is_valid():
         return Response(request.errors, status=status.HTTP_400_BAD_REQUEST)
-    general: TrailheadFilter = request.to_nt(request.validated_data)
-    time_filtered = trailheads_near(general, None)
+    general: GeneralFilter = request.to_nt(request.validated_data)
+    time_filtered = trailheads_near(general.trailhead_filter)
+    within_travel_time_limits = {trailhead: time for trailhead, time in time_filtered.items() if
+                                 time < general.trailhead_filter.max_travel_time_minutes * 60}
     resp = []
-    for trailhead, time in time_filtered.items():
+    d_ser = DistanceSerializer(context=dict(unit=general.units))
+    for trailhead, time in within_travel_time_limits.items():
         resp.append(
             dict(
-                trailhead=TrailheadSerializer(trailhead).data, travel_time_seconds=time
+                trailhead=TrailheadSerializer(trailhead).data,
+                travel_time_seconds=time,
+                trail_network_length=d_ser.to_representation(trailhead.trail_network.trail_length)
             )
         )
     resp.sort(key=lambda kv: kv["travel_time_seconds"])

@@ -1,10 +1,10 @@
-
 import React from "react";
 import { compose, withProps, lifecycle } from "recompose";
 import "react-table/react-table.css";
 import "./App.css";
 import { GoogleMap, Marker, withGoogleMap, Polyline } from "react-google-maps";
-import "rc-slider/assets/index.css";
+import { Trail, Node } from "./Types";
+import PropTypes from "prop-types";
 
 /*global google*/
 
@@ -30,28 +30,35 @@ export const TrailMap = compose(
           const point = { lat, lng: lon };
           bounds.extend(point);
         });
-        window.setTimeout(() => this.state.mapRef.fitBounds(bounds), 100);
       }
+      if (this.props.markers) {
+        this.props.markers.forEach(({ lat, lon }) => {
+          const point = { lat, lng: lon };
+          bounds.extend(point);
+        });
+      }
+      window.setTimeout(() => this.state.mapRef.fitBounds(bounds), 100);
     }
   }),
   withGoogleMap
 )(props => {
   let trail;
-  let marker;
+  let markerNodes = props.markers || [];
   if (props.trail) {
     const path = props.trail.nodes.map(({ lat, lon }) => {
       const point = { lat, lng: lon };
       return point;
     });
     trail = <Polyline path={path} options={{ strokeOpacity: 0.9 }} />;
-    const th_node = props.trail.trailhead.node;
-    marker = (
-      <Marker
-        position={{ lat: th_node.lat, lng: th_node.lon }}
-        title={`OSM_ID: ${th_node.osm_id}`}
-      />
-    );
+    markerNodes.push(props.trail.trailhead.node);
   }
+  let markers = markerNodes.map(node => (
+    <Marker
+      key={node.osm_id}
+      position={{ lat: node.lat, lng: node.lon }}
+      title={`OSM_ID: ${node.osm_id}`}
+    />
+  ));
 
   const map = (
     <GoogleMap
@@ -60,9 +67,14 @@ export const TrailMap = compose(
       defaultCenter={{ lat: -34.397, lng: 150.644 }}
     >
       {trail}
-      {marker}
+      {markers}
     </GoogleMap>
   );
 
   return map;
 });
+
+TrailMap.propTypes = {
+  trail: Trail,
+  markers: PropTypes.arrayOf(Node)
+};

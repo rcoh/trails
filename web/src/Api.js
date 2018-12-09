@@ -13,3 +13,7 @@ export const loadAPI = async (endpoint, data) => {
   }
   return await resp.json();
 };
+
+export const nearbyTrailheads = async ({location, max_travel_time_minutes, units}) => {
+  return loadAPI("trailheads/", {units, location_filter: {lat: location.lat, lon: location.lng, max_travel_time_minutes}});
+}

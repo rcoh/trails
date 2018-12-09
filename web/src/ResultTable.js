@@ -1,28 +1,16 @@
-import React, { Component } from "react";
+import React from "react";
 import PropTypes from "prop-types";
 import { server } from "./Api";
 import "react-table/react-table.css";
 import "./App.css";
-import "rc-slider/assets/index.css";
+import ReactGA from "react-ga";
 import { UnitSystems } from "./Util";
 import { Pane, Text } from "evergreen-ui";
-import ReactTable from "react-table";
+import SelectableTable from "./SelectableTable";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDirections, faDownload } from "@fortawesome/free-solid-svg-icons";
 
-export class ResultTable extends Component {
-  constructor(props) {
-    super(props);
-    this.state = { selected: undefined };
-  }
-
-  componentDidUpdate(prevProps, prevState, snapshot) {
-    if (prevProps.results !== this.props.results) {
-      this.setState({ selected: undefined });
-    }
-  }
-
-  downloadFile(props) {}
+export class ResultTable extends SelectableTable {
   u = UnitSystems[this.props.units];
   columns = [
     {
@@ -55,59 +43,28 @@ export class ResultTable extends Component {
           <Pane display="flex" justifyContent="space-around">
             <FontAwesomeIcon
               icon={faDirections}
-              onClick={() =>
+              onClick={() => {
+                ReactGA.event({ category: "trails", action: "Navigate" });
                 window.open(
                   `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${dest}`
-                )
-              }
+                );
+              }}
             />
 
             <FontAwesomeIcon
               icon={faDownload}
-              onClick={() =>
-                (window.location.href = `${server}/api/export/?id=${props.value}`)
-              }
+              onClick={() => {
+                ReactGA.event({ category: "trails", action: "export" });
+                window.location.href = `${server}/api/export/?id=${
+                  props.value
+                }`;
+              }}
             />
           </Pane>
         );
       }
     }
   ];
-
-  selectedIndex() {
-    return this.state.selected || this.props.rowIndex;
-  }
-
-  render() {
-    const that = this;
-    return (
-      <ReactTable
-        data={this.props.results}
-        columns={this.columns}
-        getTrProps={(state, rowInfo) => {
-          if (rowInfo && rowInfo.row) {
-            return {
-              onClick: e => {
-                that.setState({
-                  selected: rowInfo.index
-                });
-                that.props.onSelect(rowInfo.index);
-              },
-              style: {
-                background:
-                  rowInfo.index === this.selectedIndex() ? "#00afec" : "white",
-                color:
-                  rowInfo.index === this.selectedIndex() ? "white" : "black",
-                cursor: "pointer"
-              }
-            };
-          } else {
-            return {};
-          }
-        }}
-      />
-    );
-  }
 }
 
 ResultTable.propTypes = {

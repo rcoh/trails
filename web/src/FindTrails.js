@@ -3,10 +3,9 @@ import { Button } from "evergreen-ui";
 import { ResultTable } from "./ResultTable";
 import "react-table/react-table.css";
 import "./App.css";
-import Geosuggest from "react-geosuggest";
 import { LocationSelect } from "./LocationSelect";
-import "rc-slider/assets/index.css";
 import { loadAPI } from "./Api";
+import ReactGA from 'react-ga';
 import {
   SegmentedControl,
   Pane,
@@ -104,7 +103,7 @@ class FindTrails extends Component {
           results={this.state.results.routes}
           units={this.state.results.units}
           onSelect={this.onTrailSelect}
-          rowIndex={this.state.trailIndex}
+          //rowIndex={this.state.trailIndex}
         />
       </Card>
     );
@@ -192,6 +191,7 @@ class FindTrails extends Component {
       results: trails,
       trailIndex: trails.routes.length > 0 ? 0 : undefined
     });
+    ReactGA.event({category: "trails", action: "Load Results"});
   }
 
   async loadHistogram(event) {
@@ -209,6 +209,7 @@ class FindTrails extends Component {
     this.setState({ spinner: true });
     const histogram = await loadAPI("histogram/", loc);
     this.setState({ spinner: false, histogram, results: undefined });
+    ReactGA.event({category: "trails", action: "Load Histogram"});
   }
 }
 

@@ -2,7 +2,6 @@ import React, { Component } from "react";
 import PropTypes from "prop-types";
 import { Button } from "evergreen-ui";
 import "react-table/react-table.css";
-import "rc-slider/assets/index.css";
 import { UnitSystems } from "./Util";
 import { Pane } from "evergreen-ui";
 import { DefaultPadding } from "./Styles";

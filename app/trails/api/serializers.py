@@ -10,6 +10,7 @@ from api.models import Route, Trailhead, Node
 
 
 class NodeSerializer(serializers.ModelSerializer):
+    osm_id = serializers.CharField()
     class Meta:
         model = Node
         fields = ("osm_id", "lat", "lon")
