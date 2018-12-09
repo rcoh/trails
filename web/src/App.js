@@ -46,8 +46,8 @@ class NavBar extends Component {
   render() {
     const navigation = [
       { url: "/search", text: "Search" },
+      { url: "/explore", text: "Explore"},
       { url: "/about", text: "About" },
-      { url: "/explore", text: "Explore"}
     ];
     ReactGA.pageview(this.props.location.pathname);
     const links = navigation.map(nav => {
@@ -69,13 +69,13 @@ class NavBar extends Component {
     return (
       <Pane
         location={this.props.location}
-        height="40px"
         marginLeft="-10px"
         marginTop="-10px"
         marginRight="-8px"
         background="blueTint"
         display="flex"
         alignItems="center"
+        flexWrap="wrap"
       >
         {links}
         <a className="nav-item" href="https://ko-fi.com/Q5Q6MIB5"><Text>Support TrailsTo.Run</Text></a>
