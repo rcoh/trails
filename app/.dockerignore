@@ -5,3 +5,4 @@ trails/.pytest_cache
 kubernetes/
 backup-dbs/
 .git/
+__pycache__

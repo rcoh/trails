@@ -17,7 +17,7 @@ const AboutComponent = () => <About />;
 const ExploreComponent = () => <Explore />;
 const Users = () => <h2>Users</h2>;
 
-if (process.env["NODE_ENV"] === "prod") {
+if (process.env["NODE_ENV"] === "production") {
   ReactGA.initialize('UA-111671237-2', {debug: true});
 }
 
