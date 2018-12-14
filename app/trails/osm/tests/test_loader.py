@@ -75,6 +75,11 @@ TestSettings = IngestSettings(
     quality_settings=DefaultQualitySettings,
 )
 
+ProdLikeSettings = IngestSettings(max_distance=Distance(km=50),
+                                  max_segments=300,
+                                  max_concurrent=40,
+                                  quality_settings=DefaultQualitySettings)
+
 
 def test_trail_network(test_data, huddart_trails):
     ingestor = OSMIngestor(TestSettings)
@@ -87,16 +92,16 @@ def test_trail_network(test_data, huddart_trails):
     assert len(matching) == 1
     huddart = matching[0]
     assert huddart.total_length_km() == pytest.approx(58.38, rel=0.1)
-    #gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
+    # gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
 
     ## Node in the center of the park on a service road
-    #for trailhead in huddart.trailheads:
+    # for trailhead in huddart.trailheads:
     #    print("marking", trailhead)
     #    gmap.marker(trailhead.node.lat, trailhead.node.lon, title=trailhead.node.id)
 
-    #for trail in huddart.trail_segments():
+    # for trail in huddart.trail_segments():
     #    trail.draw(gmap)
-    #gmap.draw("out.html")
+    # gmap.draw("out.html")
     trailhead_ids = [trailhead.node.id for trailhead in huddart.trailheads]
 
     # On a "service" road that is accessible [access=permissive]
@@ -164,6 +169,14 @@ def test_sj_state(test_data):
     assert len(res) == 1
     assert problematic_network(res[0].trail_network)
     assert res[0].total_loops() == 0
+
+
+def test_amenity_parking(test_data):
+    ingestor = OSMIngestor(ProdLikeSettings)
+    res = list(ingestor.ingest_file(test_data / "catalina.osm"))
+    catalina = [t for t in res if t.trail_network.total_length_km() > 100][0]
+    trailhead_ids = {th.node.id for th in catalina.trail_network.trailheads}
+    assert 3199297117 in trailhead_ids
 
 
 def dont_test_elevation_change():

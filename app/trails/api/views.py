@@ -164,7 +164,8 @@ def nearby_trailheads(request):
             dict(
                 trailhead=TrailheadSerializer(trailhead).data,
                 travel_time_seconds=time,
-                trail_network_length=d_ser.to_representation(trailhead.trail_network.trail_length)
+                trail_network_length=d_ser.to_representation(trailhead.trail_network.trail_length),
+                trail_network=trailhead.trail_network.id
             )
         )
     resp.sort(key=lambda kv: kv["travel_time_seconds"])

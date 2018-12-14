@@ -30,21 +30,26 @@ def is_trail(way):
 
 def drivable(way):
     # TODO: learn these features / rules engine?
-    no_cars = way.tags.get("motor_vehicle") in ["no"]
-    if no_cars:
-        return False
+    if 'highway' in way.tags:
+        no_cars = way.tags.get("motor_vehicle") in ["no"]
+        if no_cars:
+            return False
 
-    if way.tags.get("access") == "no":
-        return False
+        if way.tags.get("access") == "no":
+            return False
 
-    accessible = way.tags.get("access") in ["yes", "permissive", None]
-    service_road = (
-        way.tags.get("highway") == "service"
-        and way.tags.get("service") != "parking_aisle"
-    )
-    if service_road and not accessible:
+        accessible = way.tags.get("access") in ["yes", "permissive", None]
+        service_road = (
+            way.tags.get("highway") == "service"
+            and way.tags.get("service") != "parking_aisle"
+        )
+        if service_road and not accessible:
+            return False
+        return not is_trail(way) and accessible and not no_cars
+    else:
+        if way.tags.get('amenity') in ['parking']:
+            return True
         return False
-    return not is_trail(way) and accessible and not no_cars
 
 
 class LocationFilter(NamedTuple):
@@ -69,6 +74,9 @@ class OsmiumTrailLoader(o.SimpleHandler):
         self.location_filter = location_filter
 
     def way(self, w):
+        if drivable(w):
+            node_ids = {n.ref: w.tags.get("name", "No name") for n in w.nodes}
+            self.non_trail_nodes.update(node_ids)
         if "highway" in w.tags:
             if self.location_filter:
                 first_node = w.nodes[0]
@@ -85,9 +93,6 @@ class OsmiumTrailLoader(o.SimpleHandler):
                     # A location error might occur if the osm file is an extract
                     # where nodes of ways near the boundary are missing.
                     print("WARNING: way %d incomplete. Ignoring." % w.id)
-            if drivable(w):
-                node_ids = {n.ref: w.tags.get("name", "No name") for n in w.nodes}
-                self.non_trail_nodes.update(node_ids)
 
 
 MIN_QUALITY = 0.7
