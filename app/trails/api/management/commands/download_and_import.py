@@ -20,7 +20,7 @@ def import_data(states_file):
             if os.path.exists(output):
                 print(f"ignoring {cleaned}, a log file already exists")
                 continue
-            data_path = f"/osm/{cleaned}.osm.pbf"
+            data_path = f"/osm/osm/{cleaned}.osm.pbf"
             if not os.path.exists(data_path):
                 subprocess.check_call(
                     ["curl", BASE_URL.format(cleaned), "-o", data_path]
@@ -32,8 +32,8 @@ def import_data(states_file):
                         "manage.py",
                         "import_data",
                         "-p",
-                        "16",
-                        f"/osm/{cleaned}.osm.pbf",
+                        "32",
+                        f"/osm/osm/{cleaned}.osm.pbf",
                     ],
                     stdout=out,
                 )

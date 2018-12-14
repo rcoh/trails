@@ -89,7 +89,8 @@ class OsmiumTrailLoader(o.SimpleHandler):
     def area(self, area):
         if area.tags.get('leisure') in PARKS:
             bb = BoundingBox.from_nodes([node for ring in list(area.outer_rings()) for node in ring])
-            self.areas[area.id] = Park(bb, area.tags.get('name', 'unknown'), tags_to_dict(area.tags))
+            if bb is not None:
+                self.areas[area.id] = Park(bb, area.tags.get('name', 'unknown'), tags_to_dict(area.tags))
 
     def way(self, w):
         if drivable(w):
@@ -264,6 +265,7 @@ class OSMIngestor:
         self.non_trail_nodes.update(osm_loader.non_trail_nodes)
         self.pool = Pool(parallelism)
         self.add_trails_to_graph(trails.values())
+        print(f'Trails loaded into graph')
 
         networks_to_process = [
             (network, self.ingest_settings) for network in self.trail_networks()
@@ -271,6 +273,7 @@ class OSMIngestor:
 
         results_iter = tqdm(util.pmap(networks_to_process, proc_network, self.pool), total=len(networks_to_process))
 
+        tqdm.write(f"Loading networks into DB")
         for (network, result) in results_iter:
             yield NetworkResult(network, result)
 
@@ -298,9 +301,11 @@ class OSMIngestor:
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
 
+        segments = [(s,) for s in segmented_trails]
         lengths = util.pmap(
-            [(s,) for s in segmented_trails], trail_length_km, self.pool, chunksize=512
+            segments, trail_length_km, self.pool, chunksize=512
         )
+        lengths = list(lengths)
         assert len(lengths) == len(segmented_trails)
         for trail, length in zip(segmented_trails, lengths):
             G.add_edge(

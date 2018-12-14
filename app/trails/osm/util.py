@@ -1,3 +1,4 @@
+import functools
 from functools import partial
 from multiprocessing.pool import Pool
 
@@ -27,15 +28,16 @@ def window(iterable, size=2):
         yield win
 
 
+def splat(tup, f):
+    return f(*tup)
+
+
 def pmap(iter, func, pool: Pool, chunksize=1):
+    func = functools.partial(splat, f=func)
     if pool._processes == 1:  # type: ignore
-
-        def splat(arg_tup):
-            return func(*arg_tup)
-
-        return list(map(splat, iter))
+        return list(map(func, iter))
     else:
-        return pool.starmap(func, iter, chunksize=chunksize)
+        return pool.imap_unordered(func, iter, chunksize=chunksize)
 
 
 class memoize(object):
@@ -76,6 +78,7 @@ class memoize(object):
         except KeyError:
             res = cache[key] = self.func(*args, **kw)
         return res
+
 
 def bounding_box_intersection(bb1, bb2):
     """

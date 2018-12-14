@@ -25,7 +25,7 @@ spec:
         command: ["tail", "-f", "/dev/null"]
         resources:
           requests:
-            cpu: "50m"
+            cpu: "16000m"
         env:
         - name: SERVER
           value: trails-app

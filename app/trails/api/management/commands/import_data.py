@@ -135,7 +135,7 @@ def import_data(
                 print("Error importing trailhead", ex)
 
         if len(routes_for_network) > 0:
-            routes = util.pmap(routes_for_network, Route.from_subpath, p)
+            routes = list(util.pmap(routes_for_network, Route.from_subpath, p))
             Route.objects.bulk_create(routes)
             routes_import += len(routes)
 

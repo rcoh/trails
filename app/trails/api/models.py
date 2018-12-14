@@ -21,7 +21,7 @@ class TrailNetwork(models.Model):
     @classmethod
     def from_osm_trail_network(cls, osm_network: osm.model.TrailNetwork):
         return cls(
-            name=osm_network.name or 'Unknown',
+            name=(osm_network.name or 'Unknown')[:29],
             trail_length=osm_network.total_length(),
             unique_id=osm_network.unique_id()[:100],
         )
