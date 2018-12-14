@@ -14,7 +14,7 @@ from measurement.measures import Distance
 from networkx.classes.graphviews import SubGraph
 from srtm.main import FileHandler
 
-from osm import elevations
+from osm import elevations, util
 from osm.util import memoize, window, verify_identical_nodes
 from trails.settings import SRTM_CACHE_DIR
 
@@ -52,6 +52,40 @@ class Node(NamedTuple):
             m=geopy.distance.great_circle(
                 (self.lat, self.lon), (other.lat, other.lon)
             ).m
+        )
+
+
+class BoundingBox:
+    def __init__(self, top_left: Node, bottom_right: Node):
+        self.top_left = top_left
+        self.bottom_right = bottom_right
+
+    def __repr__(self):
+        return f"({self.top_left}) -> ({self.bottom_right})"
+
+    @classmethod
+    def from_nodes(cls, nodes):
+        min_lat = None
+        min_lon = None
+        max_lat = None
+        max_lon = None
+        for node in nodes:
+            if min_lat is None or node.lat < min_lat:
+                min_lat = node.lat
+            if min_lon is None or node.lon < min_lon:
+                min_lon = node.lon
+            if max_lat is None or node.lat > max_lat:
+                max_lat = node.lat
+            if max_lon is None or node.lon > max_lon:
+                max_lon = node.lon
+        if min_lon == max_lon or max_lat == min_lat:
+            return None
+        return BoundingBox(Node(-1, min_lat, min_lon), Node(-1, max_lat, max_lon))
+
+    def intersection_pct(self, other: 'BoundingBox'):
+        return util.bounding_box_intersection(
+            dict(x1=self.top_left.lon, x2=self.bottom_right.lon, y1=self.top_left.lat, y2=self.bottom_right.lat),
+            dict(x1=other.top_left.lon, x2=other.bottom_right.lon, y1=other.top_left.lat, y2=other.bottom_right.lat)
         )
 
 
@@ -95,7 +129,7 @@ class ElevationChange(NamedTuple):
                 point.elevation = -1
             return gpx_segment
             # raise
-            #time.sleep(1)
+            # time.sleep(1)
             # print("error while adding elevations", ex)
             # return ElevationChange.to_elevated_gps(nodes, retries - 1)
 
@@ -206,8 +240,10 @@ class TrailNetwork:
             subgraph: SubGraph,
             nontrail_nodeset: Dict[int, str],
             distance_threshold: Distance,
+            name: Optional[str] = None
     ) -> None:
         self.graph = subgraph
+        self.name = name
         max_trailheads = int(self.total_length().km) // 2
         raw_trailheads = [
             Trailhead(node, nontrail_nodeset[node.id])
@@ -279,7 +315,7 @@ class TrailNetwork:
             yield self.graph[edge[0]][edge[1]]["trail"]
 
     def __repr__(self):
-        return f"[trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
+        return f"[name={self.name}][trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
 
 
 def filt_neg(d):

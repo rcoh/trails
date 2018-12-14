@@ -91,6 +91,9 @@ def test_trail_network(test_data, huddart_trails):
     ]
     assert len(matching) == 1
     huddart = matching[0]
+
+    # Currently being named "Purisima"
+    # assert huddart.name == 'Huddart Park'
     assert huddart.total_length_km() == pytest.approx(58.38, rel=0.1)
     # gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
 
@@ -143,6 +146,7 @@ def test_eaton_loop(test_data):
     ingestor = OSMIngestor(TestSettings)
     res_iter = ingestor.ingest_file(test_data / "eaton-big-canyon.osm")
     eaton_network = next(res_iter).trail_network
+    assert eaton_network.name == 'Eaton Park'
     tramanto = [t for t in eaton_network.trailheads if t.name == "Tramanto Drive"][0]
     Settings = IngestSettings(
         max_distance=Distance(km=50),
@@ -158,6 +162,7 @@ def test_pulgas(test_data):
     ingestor = OSMIngestor(TestSettings)
     result = next(ingestor.ingest_file(test_data / "pulgas.osm"))
     pulgas_network = result.trail_network
+    assert pulgas_network.name == 'Pulgas Ridge Open Space Preserve'
     trailhead_ids = [trailhead.node.id for trailhead in pulgas_network.trailheads]
     assert 1231648227 in trailhead_ids
     assert result.total_loops() > 0
@@ -175,6 +180,7 @@ def test_amenity_parking(test_data):
     ingestor = OSMIngestor(ProdLikeSettings)
     res = list(ingestor.ingest_file(test_data / "catalina.osm"))
     catalina = [t for t in res if t.trail_network.total_length_km() > 100][0]
+    assert catalina.trail_network.name == 'Catalina State Park'
     trailhead_ids = {th.node.id for th in catalina.trail_network.trailheads}
     assert 3199297117 in trailhead_ids
 
