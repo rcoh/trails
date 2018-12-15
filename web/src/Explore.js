@@ -9,7 +9,7 @@ import { nearbyTrailheads } from "./Api";
 import { Pane, Text, Card, TextInput, Spinner } from "evergreen-ui";
 import { TrailMap } from "./TrailMap";
 import { UnitSystems } from "./Util";
-import ReactGA from 'react-ga';
+import ReactGA from "react-ga";
 
 export default class Explore extends Component {
   constructor(props) {
@@ -18,6 +18,7 @@ export default class Explore extends Component {
       travelTime: 20,
       unitSystem: "imperial",
       spinner: false,
+      location: undefined
     };
     this.updateTravelTime = this.updateTravelTime.bind(this);
     this.onLocationSelect = this.onLocationSelect.bind(this);
@@ -27,9 +28,7 @@ export default class Explore extends Component {
   onLocationSelect(suggest) {
     if (suggest) {
       this.setState({
-        location: suggest.location,
-        trailIndex: undefined,
-        histogram: undefined
+        location: suggest.location
       });
     }
   }
@@ -41,32 +40,40 @@ export default class Explore extends Component {
   }
 
   async search() {
-    this.setState({spinner: true});
+    this.setState({ spinner: true });
     const results = await nearbyTrailheads({
       location: this.state.location,
       max_travel_time_minutes: this.state.travelTime,
       units: UnitSystems.imperial.name
     });
     this.setState({ results, spinner: false });
-    ReactGA.event({category: "explore", action: "Load Results"});
+    ReactGA.event({ category: "explore", action: "Load Results" });
   }
 
   renderSpinner() {
     if (this.state.spinner) {
       return <Spinner />;
-    } else{
+    } else {
       return;
     }
   }
 
   renderResults() {
-    const { results } = this.state;
-    if (!results) {
+    const { results, location } = this.state;
+    if (!(results || location)) {
       return;
     }
-    const markers = results.map(result => {
+    const markers = (results || []).map(result => {
       const { trailhead } = result;
       return trailhead.node;
+    });
+    markers.push({
+      lat: location.lat,
+      lon: location.lng,
+      icon: {
+        url: "/running-solid.svg",
+        scaledSize: { width: 30, height: 30 }
+      }
     });
     return (
       <Card width="95%">

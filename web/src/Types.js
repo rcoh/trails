@@ -7,13 +7,13 @@ export const MinMax = PropTypes.shape({
 export const Node = PropTypes.shape({
   lat: PropTypes.number.isRequired,
   lon: PropTypes.number.isRequired,
-  osm_id: PropTypes.string
+  osm_id: PropTypes.string,
+  icon: PropTypes.any
 });
 
 export const Trailhead = PropTypes.shape({
   node: Node.isRequired,
 });
-
 
 export const Trail = PropTypes.shape({
   nodes: PropTypes.arrayOf(Node).isRequired,

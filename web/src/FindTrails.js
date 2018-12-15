@@ -5,7 +5,7 @@ import "react-table/react-table.css";
 import "./App.css";
 import { LocationSelect } from "./LocationSelect";
 import { loadAPI } from "./Api";
-import ReactGA from 'react-ga';
+import ReactGA from "react-ga";
 import {
   SegmentedControl,
   Pane,
@@ -88,12 +88,28 @@ class FindTrails extends Component {
 
   renderResults() {
     if (!this.state.results) {
+      if (this.state.location) {
+        const currentLocation = [
+          {
+            lat: this.state.location.lat,
+            lon: this.state.location.lng,
+            icon: {
+              url: "/running-solid.svg",
+              scaledSize: { width: 30, height: 30 }
+            }
+          }
+        ];
+        return <Card width="95%">
+          <TrailMap markers={currentLocation} />
+        </Card>;
+      }
       return;
     }
     const trail =
       this.state.trailIndex != null
         ? this.state.results.routes[this.state.trailIndex]
         : undefined;
+
     return (
       <Card width="95%">
         <TrailMap trail={trail} />
@@ -122,47 +138,47 @@ class FindTrails extends Component {
     return (
       // Outer level container
       <Pane display="flex" alignItems="center" flexDirection="column">
-          <LocationSelect onSelect={this.onSuggestSelect} />
-          <Pane
-            display="flex"
-            justifyContent="space-around"
-            alignItems="center"
-            flexWrap="wrap"
-            {...RowStyle}
-          >
-            <Text {...DefaultPadding}>I want to hike/run about</Text>
-            <Pane display="flex" alignItems="center">
-              <TextInput
-                {...DefaultPadding}
-                value={this.state.distance}
-                width="3em"
-                onChange={this.updateDistance}
-              />
-              <SegmentedControl
-                {...DefaultPadding}
-                width={150}
-                options={unitOptions}
-                value={unit}
-                onChange={value =>
-                  this.setState({
-                    unitSystem: value,
-                    histogram: undefined,
-                    results: undefined
-                  })
-                }
-              />
-            </Pane>
-            <Button
-              flex="auto"
-              justifyContent="center"
-              appearance="primary"
-              onClick={this.loadHistogram}
-            >
-              <Pane display="flex" justifyContent="center">
-                Go
-              </Pane>
-            </Button>
+        <LocationSelect onSelect={this.onSuggestSelect} />
+        <Pane
+          display="flex"
+          justifyContent="space-around"
+          alignItems="center"
+          flexWrap="wrap"
+          {...RowStyle}
+        >
+          <Text {...DefaultPadding}>I want to hike/run about</Text>
+          <Pane display="flex" alignItems="center">
+            <TextInput
+              {...DefaultPadding}
+              value={this.state.distance}
+              width="3em"
+              onChange={this.updateDistance}
+            />
+            <SegmentedControl
+              {...DefaultPadding}
+              width={150}
+              options={unitOptions}
+              value={unit}
+              onChange={value =>
+                this.setState({
+                  unitSystem: value,
+                  histogram: undefined,
+                  results: undefined
+                })
+              }
+            />
           </Pane>
+          <Button
+            flex="auto"
+            justifyContent="center"
+            appearance="primary"
+            onClick={this.loadHistogram}
+          >
+            <Pane display="flex" justifyContent="center">
+              Go
+            </Pane>
+          </Button>
+        </Pane>
         {histogram}
         <hr />
         {spinner}
@@ -191,7 +207,7 @@ class FindTrails extends Component {
       results: trails,
       trailIndex: trails.routes.length > 0 ? 0 : undefined
     });
-    ReactGA.event({category: "trails", action: "Load Results"});
+    ReactGA.event({ category: "trails", action: "Load Results" });
   }
 
   async loadHistogram(event) {
@@ -209,7 +225,7 @@ class FindTrails extends Component {
     this.setState({ spinner: true });
     const histogram = await loadAPI("histogram/", loc);
     this.setState({ spinner: false, histogram, results: undefined });
-    ReactGA.event({category: "trails", action: "Load Histogram"});
+    ReactGA.event({ category: "trails", action: "Load Histogram" });
   }
 }
 
