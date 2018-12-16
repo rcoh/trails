@@ -1,5 +1,4 @@
 import React, { Component } from "react";
-import { Button } from "evergreen-ui";
 import { ResultTable } from "./ResultTable";
 import "react-table/react-table.css";
 import "./App.css";
