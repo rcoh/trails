@@ -15,7 +15,7 @@ from api.serializers import (
     UnitSystem,
     HistogramSerializer,
     Measurement,
-    DistanceSerializer)
+    DistanceSerializer, TrailNetworkSerializer)
 from api.traveltime import get_travel_times_cached
 
 
@@ -158,16 +158,13 @@ def nearby_trailheads(request):
     within_travel_time_limits = {trailhead: time for trailhead, time in time_filtered.items() if
                                  time < general.trailhead_filter.max_travel_time_minutes * 60}
     resp = []
-    d_ser = DistanceSerializer(context=dict(unit=general.units))
+    context = dict(unit=general.units)
     for trailhead, time in within_travel_time_limits.items():
-        resp.append(
-            dict(
-                trailhead=TrailheadSerializer(trailhead).data,
-                travel_time_seconds=time,
-                trail_network_length=d_ser.to_representation(trailhead.trail_network.trail_length),
-                trail_network=trailhead.trail_network.id
-            )
-        )
+        resp.append(dict(
+            trailhead=TrailheadSerializer(trailhead).data,
+            travel_time_seconds=time,
+            trail_network=TrailNetworkSerializer(trailhead.trail_network, context=context).data))
+
     resp.sort(key=lambda kv: kv["travel_time_seconds"])
     return Response(resp, status=200)
 

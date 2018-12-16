@@ -6,11 +6,12 @@ from measurement.measures import Distance
 from rest_framework import serializers
 from rest_framework.fields import empty, _UnvalidatedField
 
-from api.models import Route, Trailhead, Node
+from api.models import Route, Trailhead, Node, TrailNetwork
 
 
 class NodeSerializer(serializers.ModelSerializer):
     osm_id = serializers.CharField()
+
     class Meta:
         model = Node
         fields = ("osm_id", "lat", "lon")
@@ -148,3 +149,15 @@ class RouteSerializer(serializers.ModelSerializer):
             "travel_time": int(self.context["trailheads"][instance.trailhead] / 60),
             **base,
         }
+
+
+class TrailNetworkSerializer(serializers.ModelSerializer):
+    trail_length = DistanceSerializer()
+
+    class Meta:
+        model = TrailNetwork
+        fields = (
+            "id",
+            "name",
+            "trail_length"
+        )

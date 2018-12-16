@@ -48,9 +48,11 @@ export const TrailMap = compose(
         bounds.extend(left);
         bounds.extend(right);
       }
-      window.setTimeout(() => {
-        this.state.mapRef.fitBounds(bounds);
-      }, 100);
+      if (nPoints > 0) {
+        window.setTimeout(() => {
+          this.state.mapRef.fitBounds(bounds);
+        }, 100);
+      }
     }
   }),
   withGoogleMap
@@ -80,7 +82,8 @@ export const TrailMap = compose(
   const map = (
     <GoogleMap
       ref={props.onMapMounted}
-      defaultCenter={{ lat: -34.397, lng: 150.644 }}
+      defaultCenter={{ lat: 45.055833, lng: -95.689444 }}
+      defaultZoom={3}
     >
       {trail}
       {markers}

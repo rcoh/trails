@@ -11,6 +11,7 @@ import {
   Pane,
   Text,
   Card,
+  Heading,
   TextInput,
   Spinner
 } from "evergreen-ui";
@@ -18,12 +19,14 @@ import ElevationPlot from "./ElevationProfile";
 import ResultHistogram from "./ResultHistogram";
 import { DefaultPadding, RowStyle } from "./Styles";
 import { TrailMap } from "./TrailMap";
+import { Ordering } from "./Types";
 
 const defaultLocation = () => {
   // Set a default value when running locally for easy testing
-  if (process.env["NODE_ENV"] === "development") {
+  return {};
+  /*if (process.env["NODE_ENV"] === "development") {
     return { lat: 37.47463, lng: -122.23131 };
-  } else return {};
+  } else return {};*/
 };
 
 class FindTrails extends Component {
@@ -32,7 +35,8 @@ class FindTrails extends Component {
     this.state = {
       location: defaultLocation(),
       distance: 5,
-      unitSystem: "imperial"
+      unitSystem: "imperial",
+      ordering: undefined
     };
     this.onSuggestSelect = this.onSuggestSelect.bind(this);
     this.updateDistance = this.updateDistance.bind(this);
@@ -47,6 +51,7 @@ class FindTrails extends Component {
         trailIndex: undefined,
         histogram: undefined
       });
+      this.loadHistogram();
     }
   }
 
@@ -55,9 +60,17 @@ class FindTrails extends Component {
   }
 
   updateDistance(event) {
-    this.setState({
-      distance: event.target.value
-    });
+    const that = this;
+    this.setState(
+      {
+        distance: event.target.value
+      },
+      () => {
+        if (!isNaN(parseFloat(that.state.distance))) {
+          that.loadHistogram();
+        }
+      }
+    );
   }
 
   renderHistogram() {
@@ -68,7 +81,11 @@ class FindTrails extends Component {
       return NoResults;
     } else {
       return (
-        <ResultHistogram {...this.state.histogram} select={this.loadResults} />
+        <ResultHistogram
+          selected={this.state.ordering}
+          {...this.state.histogram}
+          select={this.loadResults}
+        />
       );
     }
   }
@@ -88,22 +105,35 @@ class FindTrails extends Component {
 
   renderResults() {
     if (!this.state.results) {
-      if (this.state.location) {
-        const currentLocation = [
-          {
-            lat: this.state.location.lat,
-            lon: this.state.location.lng,
-            icon: {
-              url: "/running-solid.svg",
-              scaledSize: { width: 30, height: 30 }
-            }
+      if (this.state.histogram) {
+        const currentLocation = {
+          lat: this.state.location.lat,
+          lon: this.state.location.lng,
+          icon: {
+            url: "/running-solid.svg",
+            scaledSize: { width: 30, height: 30 }
           }
-        ];
-        return <Card width="95%">
-          <TrailMap markers={currentLocation} />
-        </Card>;
+        };
+        const trailheads = (this.state.histogram.trailheads || []).map(
+          trailhead => {
+            return {
+              lat: trailhead.node.lat,
+              lon: trailhead.node.lon
+            };
+          }
+        );
+        const markers = [currentLocation, ...trailheads];
+        return (
+          <Card width="95%">
+            <TrailMap markers={markers} />
+          </Card>
+        );
       }
-      return;
+      return (
+        <Card width="95%">
+          <TrailMap />
+        </Card>
+      );
     }
     const trail =
       this.state.trailIndex != null
@@ -138,6 +168,9 @@ class FindTrails extends Component {
     return (
       // Outer level container
       <Pane display="flex" alignItems="center" flexDirection="column">
+        <Heading size={800} marginBottom="default">
+          Find trails to run near you
+        </Heading>
         <LocationSelect onSelect={this.onSuggestSelect} />
         <Pane
           display="flex"
@@ -159,25 +192,18 @@ class FindTrails extends Component {
               width={150}
               options={unitOptions}
               value={unit}
-              onChange={value =>
-                this.setState({
-                  unitSystem: value,
-                  histogram: undefined,
-                  results: undefined
-                })
-              }
+              onChange={value => {
+                this.setState(
+                  {
+                    unitSystem: value,
+                    histogram: undefined,
+                    results: undefined
+                  },
+                  this.loadHistogram
+                );
+              }}
             />
           </Pane>
-          <Button
-            flex="auto"
-            justifyContent="center"
-            appearance="primary"
-            onClick={this.loadHistogram}
-          >
-            <Pane display="flex" justifyContent="center">
-              Go
-            </Pane>
-          </Button>
         </Pane>
         {histogram}
         <hr />
@@ -198,14 +224,15 @@ class FindTrails extends Component {
         tolerance: 0.1
       },
       units: this.state.unitSystem,
-      ordering
+      ordering: Ordering[ordering]
     };
     this.setState({ spinner: true });
     const trails = await loadAPI("trails/", loc);
     this.setState({
       spinner: false,
       results: trails,
-      trailIndex: trails.routes.length > 0 ? 0 : undefined
+      trailIndex: trails.routes.length > 0 ? 0 : undefined,
+      ordering: ordering
     });
     ReactGA.event({ category: "trails", action: "Load Results" });
   }
@@ -226,6 +253,7 @@ class FindTrails extends Component {
     const histogram = await loadAPI("histogram/", loc);
     this.setState({ spinner: false, histogram, results: undefined });
     ReactGA.event({ category: "trails", action: "Load Histogram" });
+    //this.loadResults(DefaultOrdering);
   }
 }
 
