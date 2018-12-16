@@ -49,7 +49,8 @@ class FindTrails extends Component {
       this.setState({
         location: suggest.location,
         trailIndex: undefined,
-        histogram: undefined
+        histogram: undefined,
+        ordering: undefined
       });
       this.loadHistogram();
     }
@@ -63,7 +64,8 @@ class FindTrails extends Component {
     const that = this;
     this.setState(
       {
-        distance: event.target.value
+        distance: event.target.value,
+        ordering: undefined
       },
       () => {
         if (!isNaN(parseFloat(that.state.distance))) {
@@ -197,7 +199,8 @@ class FindTrails extends Component {
                   {
                     unitSystem: value,
                     histogram: undefined,
-                    results: undefined
+                    results: undefined,
+                    ordering: undefined
                   },
                   this.loadHistogram
                 );
