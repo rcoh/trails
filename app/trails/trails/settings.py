@@ -16,7 +16,10 @@ IS_PROD = os.environ.get("ENV") == "prod"
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-DB_DIR = "/db/"
+STATICFILES_DIRS = (
+    os.path.join(BASE_DIR, 'assets'),
+)
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.1/howto/deployment/checklist/
@@ -27,6 +30,14 @@ SECRET_KEY = "d=#4bn3nq-ltca9ed^^@!)z7io6c2onv0stwvk2kjpz=+@pb@@"
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = not IS_PROD
+
+WEBPACK_LOADER = {
+    'DEFAULT': {
+        'CACHE': not DEBUG,
+        'BUNDLE_DIR_NAME': 'bundles/', # must end with slash
+        'STATS_FILE': os.path.join(BASE_DIR, 'webpack-stats.json'),
+    }
+}
 
 ALLOWED_HOSTS = ["*"]
 
@@ -84,8 +95,9 @@ INSTALLED_APPS = [
     "django.contrib.gis",
     "corsheaders",
     "rest_framework",
+    "webpack_loader",
     "osm",
-    "api"
+    "est"
     # 'debug_toolbar',
 ]
 

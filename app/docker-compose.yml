@@ -1,23 +1,25 @@
 version: '3'
 services:
   db:
-    ports:
-    - "5432:5432"
+    #ports:
+    #- "5432:5432"
     image: mdillon/postgis
     env_file:
     - local.env
     volumes:
-    - ./trails-db/pgdata:/var/lib/postgresql/data
+    - trails-db:/var/lib/postgresql/data
   app:
     ports:
-    - "8000:8000"
+    - "8080:8000"
     volumes:
     - ./trails:/app
     - ../../trails-data/:/trail-data/
     build: .
     env_file:
     - local.env
-    command: ["tail", "-f", "/dev/null"]
+    command: ["sleep", "infinity"]
     links:
     - db
+volumes:
+  trails-db:
 

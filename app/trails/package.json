@@ -1,0 +1,19 @@
+{
+  "name": "app",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "devDependencies": {
+    "babel": "^6.23.0",
+    "babel-loader": "^8.1.0",
+    "typescript": "^3.9.5",
+    "webpack": "^4.43.0",
+    "webpack-bundle-tracker": "0.4.3",
+    "webpack-cli": "^3.3.12"
+  },
+  "dependencies": {
+    "@types/mapbox-gl": "^1.10.4",
+    "mapbox-gl": "^1.11.0",
+    "ts-loader": "^7.0.5"
+  }
+}

@@ -83,6 +83,7 @@ class OsmiumTrailLoader(o.SimpleHandler):
         super(OsmiumTrailLoader, self).__init__()
         self.trails: Dict[int, Trail] = {}
         self.non_trail_nodes: Dict[int, str] = {}
+        self.trail_nodes: Dict[int, Node] = {}
         self.location_filter = location_filter
         self.areas: Dict[int, Park] = {}
 
@@ -107,7 +108,11 @@ class OsmiumTrailLoader(o.SimpleHandler):
                     return
             if is_trail(w):
                 try:
+                    if w.id in self.trails:
+                        raise Exception('duplicate id!')
                     self.trails[w.id] = Trail.from_way(w)
+                    for n in self.trails[w.id].nodes:
+                        self.trail_nodes[n.id] = n
                 except o.InvalidLocationError:
                     # A location error might occur if the osm file is an extract
                     # where nodes of ways near the boundary are missing.
@@ -248,10 +253,29 @@ class OSMIngestor:
         self.trails: Dict[int, Trail] = {}
         self.parks: Dict[int, Park] = {}
         self.non_trail_nodes: Dict[int, str] = {}
-        self.global_graph = nx.Graph()
+        self.global_graph = nx.MultiGraph()
+        self.nodes: Dict[int, Node] = {}
         self.trailnetwork_results: Dict[
             TrailNetwork, Dict[Trailhead, TrailheadResult]
         ] = {}
+
+    def load_osm(self, filename: Path, extra_links: List[Tuple[int, int]] = None, parallelism=1):
+        self.pool = Pool(parallelism)
+        osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
+        print(f"Loading trails from {filename}")
+        osm_loader.apply_file(str(filename), locations=True)
+        trails = osm_loader.trails
+        for node_ids in extra_links or []:
+            trails[sum(node_ids)] = Trail(
+                nodes=[osm_loader.trail_nodes[n] for n in node_ids],
+                way_id=f'extra-{node_ids[0]}-{node_ids[1]}',
+                name='Manually added trail'
+            )
+        self.parks = osm_loader.areas
+        print(f"Importing {len(trails)} trails and {len(osm_loader.areas)} areas")
+        self.trails.update(trails)
+        self.non_trail_nodes.update(osm_loader.non_trail_nodes)
+        self.add_trails_to_graph(trails.values(), no_road_crossings=True)
 
     def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
         # TODO: figure out file bounds, delete data within those bounds
@@ -294,8 +318,8 @@ class OSMIngestor:
             res = trails
         return res
 
-    def add_trails_to_graph(self, new_trails):
-        segmented_trails = segment_trails(new_trails)
+    def add_trails_to_graph(self, new_trails, no_road_crossings=False):
+        segmented_trails = segment_trails(new_trails, set(self.non_trail_nodes.keys()))
         G = self.global_graph
         for trail in segmented_trails:
             G.add_node(trail.nodes[0]),
@@ -307,7 +331,11 @@ class OSMIngestor:
         )
         lengths = list(lengths)
         assert len(lengths) == len(segmented_trails)
+        ids = set()
         for trail, length in zip(segmented_trails, lengths):
+            if no_road_crossings and all(node.id in self.non_trail_nodes for node in (trail.nodes[0], trail.nodes[-1])):
+                continue
+            ids.add(trail.id)
             G.add_edge(
                 trail.nodes[0],
                 trail.nodes[-1],
@@ -347,7 +375,7 @@ class OSMIngestor:
                 yield trailhead
 
 
-def segment_trails(trails: List[Trail]):
+def segment_trails(trails: List[Trail], non_trail_nodes: Set[int]):
     """Returns a new list of trails where all intersections are at the start or end"""
     graph = InverseGraph()
     for trail in trails:
@@ -357,7 +385,7 @@ def segment_trails(trails: List[Trail]):
     for trail in trails:
         split_idxs = []
         for (i, node) in enumerate(trail.nodes[1:-1], 1):
-            if len(graph.node_trail_map[node.id]) > 1:
+            if len(graph.node_trail_map[node.id]) > 1 or node.id in non_trail_nodes:
                 split_idxs.append(i)
 
         if split_idxs:

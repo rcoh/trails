@@ -1,0 +1,17 @@
+{% load render_bundle from webpack_loader %}
+<!DOCTYPE html>
+<html>
+<head>
+    <script src='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js'></script>
+    <link href='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css' rel='stylesheet'/>
+    <title>Interactive maps for Django web apps</title>
+</head>
+<body>
+<h1>Map time!</h1>
+<div id='map' style='width: 400px; height:400px'></div>
+{% render_bundle 'main' %}
+</body>
+<script type="text/javascript">
+    Lib.setupMap({{ center | safe }}, {{ perimeter | safe }});
+</script>
+</html>

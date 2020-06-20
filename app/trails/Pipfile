@@ -20,6 +20,10 @@ gpxpy = "*"
 django-measurement = "*"
 "psycopg2-binary" = "*"
 rasterio = "*"
+structlog = "*"
+colorama = "*"
+pyqtree = "*"
+django-webpack-loader = "*"
 
 [dev-packages]
 mypy = "*"

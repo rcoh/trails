@@ -14,6 +14,11 @@ spec:
       labels:
         app: trails-app
     spec:
+      tolerations:
+      - key: "prempt"
+        operator: "Equal"
+        value: "OK"
+        effect: "NoSchedule"
       containers:
       - name: trails-app
         image: gcr.io/trailfinder-1536773117692/trails-app

@@ -10,6 +10,7 @@ import geopy.distance
 import gpxpy
 import gpxpy.gpx
 import srtm
+from django.contrib.gis.geos import Point
 from measurement.measures import Distance
 from networkx.classes.graphviews import SubGraph
 from srtm.main import FileHandler
@@ -53,6 +54,9 @@ class Node(NamedTuple):
                 (self.lat, self.lon), (other.lat, other.lon)
             ).m
         )
+
+    def to_point(self):
+        return Point(x=self.lon, y=self.lat)
 
 
 class BoundingBox:
@@ -151,6 +155,9 @@ class Trail:
         self.way_id: str = way_id
         self.id = derived_id or way_id
         self.name = name
+
+    def points(self):
+        return [n.to_point() for n in self.nodes]
 
     @memoize
     def length(self):
@@ -274,7 +281,7 @@ class TrailNetwork:
     def total_length_km(self):
         total_length = 0
         for edge in self.graph.edges:
-            total_length += self.graph[edge[0]][edge[1]]["weight"]
+            total_length += sum(v['weight'] for _, v in self.graph[edge[0]][edge[1]].items())
         return total_length
 
     @memoize
@@ -307,12 +314,17 @@ class TrailNetwork:
     def trail_names(self):
         names = set()
         for edge in self.graph.edges:
-            names.add(self.graph[edge[0]][edge[1]]["name"])
+            names.union({v['name'] for _,v in self.graph[edge[0]][edge[1]].items()})
         return names
 
     def trail_segments(self) -> Iterator[Trail]:
+        yielded_trails = set()
         for edge in self.graph.edges:
-            yield self.graph[edge[0]][edge[1]]["trail"]
+            for i, e in self.graph[edge[0]][edge[1]].items():
+                if e['trail'].id in yielded_trails:
+                    continue
+                yield e["trail"]
+                yielded_trails.add(e['trail'].id)
 
     def __repr__(self):
         return f"[name={self.name}][trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
