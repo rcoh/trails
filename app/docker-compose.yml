@@ -11,6 +11,8 @@ services:
   app:
     ports:
     - "8080:8000"
+    cap_add:
+    - SYS_PTRACE
     volumes:
     - ./trails:/app
     - ../../trails-data/:/trail-data/

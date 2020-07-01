@@ -23,6 +23,6 @@ urlpatterns = [
     path("admin/", admin.site.urls),
     url(r"^restadmin/", include("rest_framework.urls")),
     # url(r"^api/", include("api.urls")),
-    url("", include("est.urls")),
+    url(r"", include("est.urls")),
     # url(r"", api.views.statusz)
 ]

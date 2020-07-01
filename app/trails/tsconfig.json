@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
+    "typeRoots": ["./node_modules/@types", "./assets/typings"],
     "outDir": "./dist/",
     "allowSyntheticDefaultImports": true,
     "skipLibCheck": true,
     "noImplicitAny": true,
     "module": "es6",
+    "lib": ["es2018", "dom"],
     "target": "es5",
     "sourceMap": true
   },
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "./assets/typings"]
 }

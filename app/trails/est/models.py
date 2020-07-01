@@ -1,6 +1,10 @@
+import re
 import uuid
+from datetime import datetime, timedelta
 
 import geopy.distance
+import gpxpy
+import gpxpy.gpx
 from django.contrib.gis.db import models
 from django.contrib.gis.geos import Point
 from django_measurement.models import MeasurementField
@@ -18,15 +22,27 @@ class BaseModel(models.Model):
         abstract = True
 
 
+class Import(BaseModel):
+    border = models.PolygonField()
+    active = models.BooleanField()
+
+
 class TrailNetwork(BaseModel):
+    source = models.ForeignKey(Import, on_delete=models.CASCADE)
     name = models.TextField()
     # Just for rendering
     trails = models.MultiLineStringField(dim=2)
-    bounding_box = models.PolygonField(dim=2)
+    poly = models.PolygonField(dim=2)
     total_length = MeasurementField(measurement=Distance)
 
     # Pickled representation of the networkx graph
     graph = models.BinaryField()
+
+    def clean_name(self):
+        return re.sub(r'\W+', '', self.name)
+    @classmethod
+    def active(cls):
+        return TrailNetwork.objects.filter(source__active=True)
 
 
 class Node(models.Model):
@@ -59,3 +75,23 @@ class Circuit(BaseModel):
     route = models.LineStringField(dim=3)
     total_length = MeasurementField(measurement=Distance)
     network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
+
+    def to_gpx(self):
+        gpx = gpxpy.gpx.GPX()
+
+        # Create first track in our GPX:
+        gpx_track = gpxpy.gpx.GPXTrack()
+        gpx.tracks.append(gpx_track)
+
+        gpx_segment = gpxpy.gpx.GPXTrackSegment()
+        gpx_track.segments.append(gpx_segment)
+        # Create first segment in our GPX track:
+
+        # Create points:
+        t = datetime.now()
+        for (lng, lat, _) in self.route:
+            t += timedelta(seconds=1)
+            gpx_segment.points.append(
+                gpxpy.gpx.GPXTrackPoint(latitude=lat, longitude=lng, time=t)
+            )
+        return gpx.to_xml()

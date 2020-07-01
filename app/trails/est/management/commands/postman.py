@@ -82,7 +82,10 @@ def postman(osm_data):
                                      distance=segment.length_m()))
 
         try:
-            circuit, graph = cpp('edges.csv', start_node='1036447277')
+            s = datetime.now()
+            circuit, graph = cpp('edges.csv')
+            e = datetime.now()
+            print(f'Time: {e-s}')
             for k, v in calculate_postman_solution_stats(circuit).items():
                 print(k, v)
             with open(f"{clean_name}-{i}.gpx", "w") as f:

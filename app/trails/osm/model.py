@@ -314,20 +314,24 @@ class TrailNetwork:
     def trail_names(self):
         names = set()
         for edge in self.graph.edges:
-            names.union({v['name'] for _,v in self.graph[edge[0]][edge[1]].items()})
+            names.union({v['name'] for _, v in self.graph[edge[0]][edge[1]].items()})
         return names
 
     def trail_segments(self) -> Iterator[Trail]:
-        yielded_trails = set()
-        for edge in self.graph.edges:
-            for i, e in self.graph[edge[0]][edge[1]].items():
-                if e['trail'].id in yielded_trails:
-                    continue
-                yield e["trail"]
-                yielded_trails.add(e['trail'].id)
+        yield from segments_for_graph(self.graph)
 
     def __repr__(self):
         return f"[name={self.name}][trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
+
+
+def segments_for_graph(graph):
+    yielded_trails = set()
+    for edge in graph.edges:
+        for i, e in graph[edge[0]][edge[1]].items():
+            if e['trail'].id in yielded_trails:
+                continue
+            yield e["trail"]
+            yielded_trails.add(e['trail'].id)
 
 
 def filt_neg(d):
