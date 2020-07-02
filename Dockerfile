@@ -16,6 +16,7 @@ RUN pipenv install --pre --system && rm -r ~/.cache
 COPY trails/ /app/
 RUN rm -rf /app/assets/bundles/
 COPY --from=bundles /app/assets/bundles /app/assets/bundles
+ENV ENV prod
 CMD ["bin/run-prod.sh"]
 
 #RUN pip install  SRTM.py
