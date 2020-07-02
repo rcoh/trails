@@ -1,0 +1,46 @@
+[[source]]
+url = "https://pypi.org/simple"
+verify_ssl = true
+name = "pypi"
+
+[packages]
+osmium = "==2.15.3"
+tqdm = "==4.25.0"
+geopy = "==1.16.0"
+networkx = "*"
+djangorestframework = "==3.8.2"
+pytest-django = "==3.4.2"
+requests-mock = "==1.5.2"
+django-click = "==2.1.0"
+django-cors-headers = "==2.4.0"
+djangorestframework-gis = "==0.13"
+# "SRTM.py" = "*"
+Django = "==2.2.13"
+gpxpy = "*"
+django-measurement = "*"
+"psycopg2-binary" = "*"
+rasterio = "*"
+structlog = "*"
+colorama = "*"
+pyqtree = "*"
+django-webpack-loader = "*"
+cattrs = "*"
+postman-problems = "*"
+'srtm.py' = "*"
+gunicorn = "*"
+dj-database-url = "*"
+
+[dev-packages]
+mypy = "*"
+black = "*"
+gmplot = "==1.2.0"
+pytest = "==3.7.4"
+ipython = "*"
+django-debug-toolbar = "*"
+djdt-flamegraph = "*"
+
+[requires]
+python_version = "3.7"
+
+[pipenv]
+allow_prereleases = true

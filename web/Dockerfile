@@ -1,1 +1,0 @@
-FROM tiagostutz/create-react-app-ngnix

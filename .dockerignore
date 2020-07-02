@@ -1,3 +1,4 @@
 cache/
 .git/
 __pycache__
+trails/node_modules
