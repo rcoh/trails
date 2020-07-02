@@ -8,11 +8,13 @@ from django.core.serializers import deserialize
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
+from django.views.decorators.csrf import ensure_csrf_cookie
 
 from est.models import TrailNetwork, Import, Circuit
 from est.postman import circuits
 
 
+@ensure_csrf_cookie
 def default_map(request):
     # TODO: move this token to Django settings from an environment variable
     # found in the Mapbox account settings and getting started instructions

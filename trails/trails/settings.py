@@ -44,16 +44,13 @@ WEBPACK_LOADER = {
 
 ALLOWED_HOSTS = ["*"]
 
+SECURE_CONTENT_TYPE_NOSNIFF = True
+SECURE_BROWSER_XSS_FILTER = True
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+X_FRAME_OPTIONS = "DENY"
+
 if IS_PROD:
-    # SECURE_HSTS_SECONDS = 600
-    # SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-    # SECURE_SSL_REDIRECT = True
-    # SECURE_HSTS_PRELOAD = True
-    SECURE_CONTENT_TYPE_NOSNIFF = True
-    SECURE_BROWSER_XSS_FILTER = True
-    SESSION_COOKIE_SECURE = True
-    CSRF_COOKIE_SECURE = True
-    X_FRAME_OPTIONS = "DENY"
     DATABASES = {
         'default': dj_database_url.config(conn_max_age=600, ssl_require=True,
                                           engine="django.contrib.gis.db.backends.postgis")
