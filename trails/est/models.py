@@ -28,7 +28,7 @@ class Import(BaseModel):
 
 
 class TrailNetwork(BaseModel):
-    source = models.ForeignKey(Import, on_delete=models.CASCADE)
+    source = models.ForeignKey(Import, on_delete=models.CASCADE, related_name='networks')
     name = models.TextField()
     # Just for rendering
     trails = models.MultiLineStringField(dim=2)

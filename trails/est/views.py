@@ -1,8 +1,10 @@
 import json
+from typing import Any, Dict, List
 
 import attr
 import cattr
 from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.core.serializers import deserialize
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
@@ -44,6 +46,22 @@ class AreasRequest:
         return Polygon.from_bbox(
             (*attr.astuple(self.sw), *attr.astuple(self.ne))
         )
+
+
+@attr.s(auto_attribs=True, frozen=True)
+class ExternalImport:
+    #import_record: str
+    networks: str
+
+
+def external_import(request):
+    data: ExternalImport = cattr.structure(json.loads(request.body), ExternalImport)
+    #import_record = deserialize('json', data.import_record)
+    networks = deserialize('json', data.networks)
+    #import_record.save()
+    for network in networks:
+        network.save()
+    return JsonResponse(data=dict(status="ok"))
 
 
 COLORS = ["5bc0eb", "fde74c", "9bc53d", "c3423f", "404e4d"]

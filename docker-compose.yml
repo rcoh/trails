@@ -15,7 +15,7 @@ services:
     - SYS_PTRACE
     volumes:
     - ./trails:/app
-    - ../../trails-data/:/trail-data/
+    - ../trails-data/:/trail-data/
     env_file:
     - local.env
     build:
