@@ -5,9 +5,6 @@ import cattr
 from django.contrib.gis.geos import MultiPolygon, Polygon
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
-
-# Create your views here.
-from django.shortcuts import render
 from django.urls import reverse
 
 from est.models import TrailNetwork, Import, Circuit

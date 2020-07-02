@@ -1,8 +1,0 @@
-trails-db/
-trails/.mypy_cache
-trails/.pytest_cache
-*.pyc
-kubernetes/
-backup-dbs/
-.git/
-__pycache__

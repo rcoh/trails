@@ -16,10 +16,11 @@ services:
     volumes:
     - ./trails:/app
     - ../../trails-data/:/trail-data/
-    build: .
     env_file:
     - local.env
-    dockerfile: Dockerfile.dev
+    build:
+      dockerfile: Dockerfile.dev
+      context: .
     command: ["sleep", "infinity"]
     links:
     - db
