@@ -18,6 +18,7 @@ RUN rm -rf /app/assets/bundles/
 COPY --from=bundles /app/assets/bundles /app/assets/bundles
 COPY --from=bundles /app/webpack-stats.json /app/webpack-stats.json
 ENV ENV prod
+RUN python manage.py collectstatic
 CMD ["bin/run-prod.sh"]
 
 #RUN pip install  SRTM.py
