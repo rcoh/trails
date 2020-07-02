@@ -70,7 +70,7 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
       "fill-opacity": [
         "case",
         ["boolean", ["feature-state", "hover"], false],
-        0.7,
+        0.05,
         0.3,
       ],
     },
@@ -95,7 +95,7 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
 
   map.on("mousemove", "parks-layer", function (e) {
     if (e.features.length > 0) {
-      if (hoveredParkId) {
+      if (hoveredParkId != null) {
         map.setFeatureState(
           { source: "parks", id: hoveredParkId },
           { hover: false }
@@ -112,7 +112,7 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
   // Change it back to a pointer when it leaves.
   map.on("mouseleave", "parks-layer", function () {
     map.getCanvas().style.cursor = "";
-    if (hoveredParkId) {
+    if (hoveredParkId != null) {
       map.setFeatureState(
         { source: "parks", id: hoveredParkId },
         { hover: false }
