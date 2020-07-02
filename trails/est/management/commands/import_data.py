@@ -1,5 +1,6 @@
 import pickle
 from datetime import datetime, timedelta
+from multiprocessing import Pool
 
 import djclick as click
 import gpxpy
@@ -12,35 +13,12 @@ import est.models as e
 from osm.loader import IngestSettings, DefaultQualitySettings, OSMIngestor
 
 
-def circuit_to_gpx(circuit, edge_map):
-    gpx = gpxpy.gpx.GPX()
-
-    # Create first track in our GPX:
-    gpx_track = gpxpy.gpx.GPXTrack()
-    gpx.tracks.append(gpx_track)
-
-    gpx_segment = gpxpy.gpx.GPXTrackSegment()
-    gpx_track.segments.append(gpx_segment)
-    # Create first segment in our GPX track:
-
-    # Create points:
-    t = datetime.now()
-    for i, segment in enumerate(circuit):
-        start, end, _, meta = segment
-        nodes = edge_map[meta['id']]
-        if int(end) == nodes[0].id:
-            nodes = reversed(nodes)
-        for node in nodes:
-            t += timedelta(seconds=1)
-            gpx_segment.points.append(
-                gpxpy.gpx.GPXTrackPoint(latitude=node.lat, longitude=node.lon, time=t)
-            )
-    return gpx
 
 
 @click.command()
 @click.argument('osm-data', type=click.Path(exists=True))
-def postman(osm_data):
+@click.option('--parallelism', '-p', type=click.INT, default=1)
+def import_data(osm_data, parallelism):
     Settings = IngestSettings(
         max_distance=Distance(km=50),
         max_segments=300,
@@ -51,10 +29,11 @@ def postman(osm_data):
     e.Import.objects.all().update(active=False)
     loader = OSMIngestor(Settings)
     loader.load_osm(osm_data, extra_links=[(885729040, 827103027)])
-    e.TrailNetwork.objects.all().delete()
+    #e.TrailNetwork.objects.all().delete()
     import_obj = e.Import(active=True, border=Polygon())
     import_obj.save()
     networks = []
+    p = Pool(parallelism)
     for network in tqdm(loader.trail_networks()):
         try:
             multiline_strs = MultiLineString([LineString(trail.points()) for trail in network.trail_segments()])

@@ -347,8 +347,11 @@ class OSMIngestor:
     def trail_networks(self):
         G = self.global_graph
         for c in nx.connected_components(G):
-            subgraph = G.subgraph(c).copy()
-            network_bb = BoundingBox.from_nodes(subgraph.nodes)
+            subgraph = G.subgraph(c)
+            if subgraph.size(weight='weight') < 5:
+                continue
+            subgraph = subgraph.copy()
+            network_bb = BoundingBox.from_nodes(c)
             name = None
             if network_bb is not None:
                 (best_park, best_overlap) = None, None

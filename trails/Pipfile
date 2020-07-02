@@ -36,6 +36,7 @@ black = "*"
 gmplot = "==1.2.0"
 pytest = "==3.7.4"
 ipython = "*"
+py-spy = "*"
 
 [requires]
 python_version = "3.7"
