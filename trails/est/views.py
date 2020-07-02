@@ -50,15 +50,16 @@ class AreasRequest:
 
 @attr.s(auto_attribs=True, frozen=True)
 class ExternalImport:
-    #import_record: str
+    import_record: str
     networks: str
 
 
 def external_import(request):
     data: ExternalImport = cattr.structure(json.loads(request.body), ExternalImport)
-    #import_record = deserialize('json', data.import_record)
+    import_record = deserialize('json', data.import_record)
     networks = deserialize('json', data.networks)
-    #import_record.save()
+    for rec in import_record:
+        rec.save()
     for network in networks:
         network.save()
     return JsonResponse(data=dict(status="ok"))

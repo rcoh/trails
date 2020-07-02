@@ -10,6 +10,8 @@ import est.models as e
 def export(target):
     most_recent_import = e.Import.objects.order_by('-created_at').first()
     click.confirm(f'Importing {most_recent_import.networks.count()} networks imported {most_recent_import.created_at}')
-    ser = serialize('json', most_recent_import.networks.all())
-    resp = requests.post(f"{target}/api/import", json=dict(networks=ser))
+    networks = serialize('json', most_recent_import.networks.all())
+    import_obj = serialize('json', [most_recent_import])
+    resp = requests.post(f"{target}/api/import", json=dict(import_record=import_obj, networks=networks))
+    print(resp.content)
     print(resp.json())
