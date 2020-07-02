@@ -5,7 +5,6 @@ COPY trails/yarn.lock /app/yarn.lock
 RUN yarn install
 COPY trails/ /app/
 RUN yarn run webpack --mode=production
-RUN ls /app/assets
 
 FROM python:3.7 as python
 WORKDIR /app/
@@ -15,8 +14,9 @@ COPY trails/Pipfile /app/
 COPY trails/Pipfile.lock /app/
 RUN pipenv install --pre --system && rm -r ~/.cache
 COPY trails/ /app/
-RUN rm -r /app/assets/bundles/
+RUN rm -rf /app/assets/bundles/
 COPY --from=bundles /app/assets/bundles /app/assets/bundles
+CMD ["bin/run-prod.sh"]
 
 #RUN pip install  SRTM.py
 #EXPOSE 8000
