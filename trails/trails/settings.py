@@ -172,6 +172,9 @@ USE_TZ = True
 
 STATIC_URL = "/static/"
 
+# Celery settings
+CELERY_BROKER_URL = os.environ.get('REDIS_URL', 'redis://localhost:6379')
+
 if DEBUG and False:
     LOGGING = {
         "version": 1,

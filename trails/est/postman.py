@@ -8,8 +8,9 @@ from networkx import read_gpickle
 from postman_problems import solver
 from postman_problems.stats import calculate_postman_solution_stats
 
-from est.models import TrailNetwork, Circuit
+from est.models import TrailNetwork, Circuit, Complete, Error
 from osm.model import segments_for_graph
+from trails.celery import app
 
 
 def circuit_to_line_string(circuit, edge_map):
@@ -23,11 +24,25 @@ def circuit_to_line_string(circuit, edge_map):
     return LineString(line_string)
 
 
-def circuits(network: TrailNetwork):
+def find_or_compute_circuit(network: TrailNetwork):
     existing_circuits = Circuit.objects.filter(network=network)
     if existing_circuits.exists():
         return existing_circuits.first()
     else:
+        circuit = Circuit.objects.create(
+            network=network,
+            status=1
+        )
+        status = create_circuit.delay(network.id, circuit.id)
+        print(status)
+        return circuit
+
+
+@app.task(bind=True)
+def create_circuit(self, network_id: str, circuit_id: str):
+    network = TrailNetwork.objects.get(id=network_id)
+    circuit = Circuit.objects.get(id=circuit_id)
+    try:
         graph = read_gpickle(BytesIO(network.graph.tobytes()))
         with NamedTemporaryFile(suffix='.csv', mode='w') as f:
             writer = csv.DictWriter(f, fieldnames=['start', 'end', 'id', 'distance'])
@@ -38,14 +53,18 @@ def circuits(network: TrailNetwork):
                                      distance=segment.length_m()))
                 edge_map[segment.id] = segment.nodes
             f.flush()
-            circuit, _ = solver.cpp(f.name)
-            stats = calculate_postman_solution_stats(circuit)
+            circuit_nodes, _ = solver.cpp(f.name)
+            stats = calculate_postman_solution_stats(circuit_nodes)
             walked_twice = Distance(m=stats['distance_doublebacked'])
             walked_total = Distance(m=stats['distance_walked_required'])
 
-            line_string = circuit_to_line_string(circuit, edge_map)
-            return Circuit.objects.create(
-                route=line_string,
-                total_length=walked_total,
-                network=network
-            )
+            line_string = circuit_to_line_string(circuit_nodes, edge_map)
+            circuit.route = line_string
+            circuit.total_length = walked_total
+            circuit.status = Complete
+    except Exception as ex:
+        circuit.status = Error
+        circuit.error = ex
+        raise
+    finally:
+        circuit.save()

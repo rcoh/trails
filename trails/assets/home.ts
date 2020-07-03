@@ -6,10 +6,17 @@ mapboxgl.accessToken =
 
 let parks: Feature[] = [];
 
-export const computeGpx = async (networkId: string) => {
-  await api(`/api/circuit/${networkId}/`, "POST");
+interface NetworkResp {
+  html: string;
+}
+
+export const computeGpx = async (networkId: string): Promise<NetworkResp> => {
+  return await (await api(`/api/circuit/${networkId}/`, "POST")).json();
 };
 
+const downloadNetwork = async (networkId: string): Promise<NetworkResp> => {
+  return await (await api(`/api/network/${networkId}/`, "GET")).json();
+};
 
 const api = async (url: string, method: "GET" | "POST", data?: any) => {
   let body = undefined;
@@ -126,21 +133,31 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
     const coordinates = park.properties.center;
     const description = park.properties.description;
 
-    new mapboxgl.Popup()
+    const popup = new mapboxgl.Popup()
       .setLngLat(JSON.parse(coordinates))
       .setHTML(description)
       .addTo(map);
+
+    const refresh = setInterval(async () => {
+      const resp = await downloadNetwork(park.properties.id);
+      popup.setHTML(resp.html);
+    }, 5000);
     if (park.properties.circuit_status == "undone") {
       const el = document.getElementById(park.properties.id);
-      el.onclick = () => {
-        computeGpx(park.properties.id);
+      el.onclick = async () => {
+        const resp = await computeGpx(park.properties.id);
+        popup.setHTML(resp.html);
       };
     }
-    
+
+    popup.on("close", () => {
+      clearInterval(refresh);
+    });
+
     const zoomLink = document.getElementById(`${park.properties.id}-zoom`);
     zoomLink.onclick = () => {
       map.fitBounds(JSON.parse(park.properties.bb));
-    }
+    };
   });
 };
 

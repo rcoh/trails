@@ -29,6 +29,8 @@ postman-problems = "*"
 gunicorn = "*"
 dj-database-url = "*"
 whitenoise = "*"
+celery = "*"
+redis = "*"
 
 [dev-packages]
 mypy = "*"

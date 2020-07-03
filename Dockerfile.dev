@@ -23,7 +23,6 @@ RUN pip install pipenv
 COPY trails/Pipfile /app/
 COPY trails/Pipfile.lock /app/
 RUN pipenv install --pre --system && rm -r ~/.cache
-RUN pip install  SRTM.py
 COPY trails/ /app/
 EXPOSE 8000
 RUN python manage.py check

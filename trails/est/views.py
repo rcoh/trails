@@ -4,14 +4,15 @@ from typing import Any, Dict, List
 import attr
 import cattr
 from django.contrib.gis.geos import MultiPolygon, Polygon
+from django.contrib.humanize.templatetags.humanize import naturaltime
 from django.core.serializers import deserialize
 from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
 
-from est.models import TrailNetwork, Import, Circuit
-from est.postman import circuits
+from est.models import TrailNetwork, Import, Circuit, Complete, InProgress, Error
+from est.postman import find_or_compute_circuit
 
 
 @ensure_csrf_cookie
@@ -72,12 +73,18 @@ def humanize(n: float):
 
 def circuit_description(network: TrailNetwork):
     circuit = Circuit.objects.filter(network=network).first()
+    recompute_html = f'<a id="{network.id}" href="#">Compute complete tour</a>'
     if circuit is not None:
-        return f"Full tour: " \
-               f"{humanize(circuit.total_length.mi)} miles. " \
-               f"<a href=\"{reverse(gpx, kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a>"
+        if circuit.status == Complete:
+            return f"Full tour: " \
+                   f"{humanize(circuit.total_length.mi)} miles. " \
+                   f"<a href=\"{reverse(gpx, kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a>"
+        elif circuit.status == InProgress:
+            return f"Circuit computation in progress (started {naturaltime(circuit.created_at)})"
+        elif circuit.status == Error:
+            return f"Circuit failed to be built. {circuit.error}. Recompute: {recompute_html}"
     else:
-        return f'<a id="{network.id}" href="#">Compute complete tour</a>'
+        return recompute_html
 
 
 def circuit_status(network: TrailNetwork):
@@ -86,6 +93,24 @@ def circuit_status(network: TrailNetwork):
         return "complete"
     else:
         return "undone"
+
+
+def html_description(network: TrailNetwork) -> str:
+    return f"""
+        <h4>{network.name}</h4>
+        <div class="map-popover">
+            <div class="milage">{humanize(network.total_length.mi)} miles of trails</div>
+            <div class="tour">{circuit_description(network)}</div>
+            <div class="zoom"><a href="#" id="{network.id}-zoom">Zoom</a></div>
+        </div>
+        """
+
+
+def network(request, network_id):
+    network = TrailNetwork.objects.get(id=network_id)
+    return JsonResponse(data=dict(
+        html=html_description(network=network)
+    ))
 
 
 def areas(request):
@@ -101,14 +126,7 @@ def areas(request):
                 properties=dict(
                     circuit_status=circuit_status(network),
                     id=network.id,
-                    description=f"""
-    <h4>{network.name}</h4>
-    <div class="map-popover">
-        <div class="milage">{humanize(network.total_length.mi)} miles of trails</div>
-        <div class="tour">{circuit_description(network)}</div>
-        <div class="zoom"><a href="#" id="{network.id}-zoom">Zoom</a></div>
-    </div>
-    """,
+                    description=html_description(network),
                     fill_color='#' + COLORS[i % len(COLORS)],
                     center=[network.poly.centroid.x, network.poly.centroid.y],
                     bb=[network.poly.extent[0:2], network.poly.extent[2:4]],
@@ -128,8 +146,11 @@ def gpx(request, circuit_id: str) -> HttpResponse:
     return response
 
 
-def circuit(request, network_id: str) -> JsonResponse:
-    return JsonResponse(dict(ok=True, data=circuits(TrailNetwork.objects.get(id=network_id)).total_length.mi))
+def compute_circuit(request, network_id: str) -> JsonResponse:
+    trail_network = TrailNetwork.objects.get(id=network_id)
+    circuit_in_progress = find_or_compute_circuit(trail_network)
+    return JsonResponse(
+        dict(ok=True, data=dict(circuit_id=circuit_in_progress.id), html=html_description(trail_network)))
 
 
 def base_map(request):

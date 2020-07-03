@@ -40,6 +40,7 @@ class TrailNetwork(BaseModel):
 
     def clean_name(self):
         return re.sub(r'\W+', '', self.name)
+
     @classmethod
     def active(cls):
         return TrailNetwork.objects.filter(source__active=True)
@@ -71,10 +72,21 @@ class Node(models.Model):
         return cls(point=Point(x=osm_node.lon, y=osm_node.lat), osm_id=osm_node.id)
 
 
+NotStarted = 0
+InProgress = 1
+Complete = 2
+Error = 3
+
+
 class Circuit(BaseModel):
-    route = models.LineStringField(dim=3)
-    total_length = MeasurementField(measurement=Distance)
+    route = models.LineStringField(dim=3, null=True)
+    total_length = MeasurementField(measurement=Distance, null=True)
     network = models.ForeignKey(TrailNetwork, on_delete=models.CASCADE)
+
+    status = models.IntegerField(
+        choices=[(NotStarted, "not_started"), (InProgress, "in_progress"), (Complete, "complete"), (Error, "error")],
+        default=2)
+    error = models.TextField(blank=True)
 
     def to_gpx(self):
         gpx = gpxpy.gpx.GPX()

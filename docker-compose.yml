@@ -24,6 +24,23 @@ services:
     command: ["sleep", "infinity"]
     links:
     - db
+    - redis
+  worker:
+    build:
+      dockerfile: Dockerfile.dev
+      context: .
+    env_file:
+      - local.env
+    volumes:
+      - ./trails:/app
+      - ../trails-data/:/trail-data/
+    depends_on:
+      - db
+      - redis
+
+    command: celery -A trails worker -l info
+  redis:
+    image: redis:latest
 volumes:
   trails-db:
 
