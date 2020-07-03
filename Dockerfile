@@ -19,9 +19,3 @@ COPY --from=bundles /app/assets/bundles /app/assets/bundles
 COPY --from=bundles /app/webpack-stats.json /app/webpack-stats.json
 ENV ENV prod
 RUN python manage.py collectstatic
-CMD ["bin/run-prod.sh"]
-
-#RUN pip install  SRTM.py
-#EXPOSE 8000
-#RUN python manage.py check
-#CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
