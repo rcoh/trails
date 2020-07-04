@@ -41,22 +41,11 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
     sw: bounds.getSouthWest(),
     ne: bounds.getNorthEast(),
   });
-  const { data: newData } = await visibleAreas.json();
-  const parksInData = newData.features.map((feat: Feature) => feat.id);
-  const parkSet = new Set(parksInData);
-  const parkIdsLoaded = new Set(parks.map((park) => park.id));
-  const parksAlreadyLoaded = parks.filter((park) => !parkSet.has(park.id));
-  if (parksInData.every((parkId: number) => parkIdsLoaded.has(parkId))) {
-    // we've already loaded all the parks for this region
-    return;
-  }
-  newData.features.push(...parksAlreadyLoaded);
-  parks = newData.features;
-
+  const { data } = await visibleAreas.json();
   if (map.getSource("parks") !== undefined) {
     const source = map.getSource("parks");
     if (source.type == "geojson") {
-      source.setData(newData);
+      source.setData(data);
     } else {
       throw new Error("unexpected source");
     }
@@ -66,7 +55,7 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
   // TODO: refactor to split new data from initialization
   map.addSource("parks", {
     type: "geojson",
-    data: newData,
+    data,
   });
   map.addLayer({
     id: "parks-layer",
@@ -203,6 +192,7 @@ const setupMap = async (center: any, perimeter: any) => {
   );
   map.on("load", async () => await loadVisibleParks(map));
   map.on("moveend", () => {
+    console.log("reloading parks");
     loadVisibleParks(map);
   });
 

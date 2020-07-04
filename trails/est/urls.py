@@ -1,7 +1,7 @@
 from django.urls import path
 from django.views.decorators.csrf import csrf_exempt
 
-from est import views
+from est import views, admin
 
 urlpatterns = [
     path('', views.default_map, name='index'),
