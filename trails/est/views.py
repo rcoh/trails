@@ -55,8 +55,8 @@ def external_import(request):
     import_record = deserialize('json', data.import_record)
     networks = deserialize('json', data.networks)
     for rec in import_record:
-        #overlaps = Import.objects.filter(border__intersects=rec.object.border, active=True)
-        #if overlaps.exists():
+        # overlaps = Import.objects.filter(border__intersects=rec.object.border, active=True)
+        # if overlaps.exists():
         #    if rec.object.id == overlaps.first().id:
         #        return JsonResponse(status=400, data=dict(status="already done"))
         #    return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
@@ -84,7 +84,9 @@ def circuit_description(network: TrailNetwork):
         if circuit.status == Complete:
             return f"Full tour: " \
                    f"{humanize(circuit.total_length.mi)} miles. " \
-                   f"<a href=\"{reverse(gpx, kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a>"
+                   f"<a href=\"{reverse(gpx, kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a> " \
+                   f'<a id="{network.id}-show" href="#">Show on map</a>'
+
         elif circuit.status == InProgress:
             return f"Circuit computation in progress (started {naturaltime(circuit.created_at)})"
         elif circuit.status == Error:
@@ -106,9 +108,17 @@ def html_description(network: TrailNetwork) -> str:
 
 def network(request, network_id):
     network = TrailNetwork.objects.get(id=network_id)
+    existing_circuit = Circuit.objects.filter(network=network).first()
+    circuit_id = None
+    if existing_circuit:
+        circuit_id = existing_circuit.id
     return JsonResponse(data=dict(
-        html=html_description(network=network)
+        html=html_description(network=network),
+        circuit_id=circuit_id
     ))
+
+
+MAX_AREAS = 10000
 
 
 def areas(request):
@@ -119,20 +129,25 @@ def areas(request):
         type='FeatureCollection',
         features=[
             dict(
-                id=i,
+                id=network.id.int % MAX_AREAS,
                 type='Feature',
                 properties=dict(
                     id=network.id,
-                    fill_color='#' + COLORS[i % len(COLORS)],
+                    fill_color='#' + COLORS[network.id.int % len(COLORS)],
                     center=[network.poly.centroid.x, network.poly.centroid.y],
                     bb=[network.poly.extent[0:2], network.poly.extent[2:4]],
                 ), geometry=json.loads(network.poly.json)
             )
-            for i, network in enumerate(networks)
+            for network in networks
         ]
     )
 
     return JsonResponse(dict(ok=True, data=geojson))
+
+
+def circuit_json(request, circuit_id: str) -> HttpResponse:
+    circuit = Circuit.objects.get(id=circuit_id)
+    return JsonResponse(data=dict(json=json.loads(circuit.route.json)))
 
 
 def gpx(request, circuit_id: str) -> HttpResponse:

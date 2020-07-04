@@ -8,10 +8,19 @@ let parks: Feature[] = [];
 
 interface NetworkResp {
   html: string;
+  circuit_id?: string;
+}
+
+interface CircuitResponse {
+  json: string;
 }
 
 export const computeGpx = async (networkId: string): Promise<NetworkResp> => {
   return await (await api(`/api/circuit/${networkId}/`, "POST")).json();
+};
+
+const downloadPath = async (circuitId: string): Promise<CircuitResponse> => {
+  return await (await api(`/api/circuit/${circuitId}/json`, "GET")).json();
 };
 
 const downloadNetwork = async (networkId: string): Promise<NetworkResp> => {
@@ -32,6 +41,33 @@ const api = async (url: string, method: "GET" | "POST", data?: any) => {
     body,
   };
   return fetch(url, args);
+};
+
+const showPath = async (
+  map: mapboxgl.Map,
+  circuitId: string,
+  networkId: string
+) => {
+  const { json } = await downloadPath(circuitId);
+  const mapId = `circuit-${networkId}`;
+
+  map.addSource(mapId, { type: "geojson", data: json });
+  map.addLayer({
+    id: mapId,
+    type: "line",
+    source: mapId,
+    paint: {
+      "line-color": "black",
+      "line-width": 1,
+      "line-opacity": 1,
+    },
+  });
+};
+
+const removePath = (map: mapboxgl.Map, networkId: string) => {
+  const mapId = `circuit-${networkId}`;
+  map.removeLayer(mapId);
+  map.removeSource(mapId);
 };
 
 const loadVisibleParks = async (map: mapboxgl.Map) => {
@@ -65,6 +101,8 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
       "fill-color": ["get", "fill_color"],
       "fill-opacity": [
         "case",
+        ["boolean", ["feature-state", "focused"], false],
+        0.0,
         ["boolean", ["feature-state", "hover"], false],
         0.05,
         0.3,
@@ -121,9 +159,12 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
       .setLngLat(JSON.parse(coordinates))
       .setHTML("loading...")
       .addTo(map);
+    console.log(`setting ${park.id} to focused`);
+    map.setFeatureState({ source: "parks", id: park.id }, { focused: true });
 
     // TODO: react would be useful...
-    const setHtml = (html: string) => {
+    const setHtml = (resp: NetworkResp) => {
+      const { html } = resp;
       popup.setHTML(html);
       const zoomLink = document.getElementById(`${park.properties.id}-zoom`);
       zoomLink.onclick = () => {
@@ -133,19 +174,28 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
       if (el != null) {
         el.onclick = async () => {
           const resp = await computeGpx(park.properties.id);
-          setHtml(resp.html);
+          setHtml(resp);
+        };
+      }
+
+      const showOnMap = document.getElementById(`${park.properties.id}-show`);
+      if (showOnMap != null) {
+        showOnMap.onclick = () => {
+          showPath(map, resp.circuit_id, park.properties.id);
         };
       }
     };
-    setHtml((await downloadNetwork(park.properties.id)).html);
-    //popup.addTo(map);
+    setHtml(await downloadNetwork(park.properties.id));
 
     const refresh = setInterval(async () => {
       const resp = await downloadNetwork(park.properties.id);
-      setHtml(resp.html);
+      setHtml(resp);
     }, 5000);
 
     popup.on("close", () => {
+      console.log(`setting ${park.id} to unfocused`);
+      map.setFeatureState({ source: "parks", id: park.id }, { focused: false });
+      //removePath(map, park.properties.id);
       clearInterval(refresh);
     });
   });
