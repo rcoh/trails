@@ -55,12 +55,12 @@ def external_import(request):
     import_record = deserialize('json', data.import_record)
     networks = deserialize('json', data.networks)
     for rec in import_record:
-        overlaps = Import.objects.filter(border__intersects=rec.object.border, active=True)
-        if overlaps.exists():
-            if rec.object.id == overlaps.first().id:
-                return JsonResponse(status=400, data=dict(status="already done"))
-            return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
-                                                      rec=json.loads(serialize('json', overlaps))))
+        #overlaps = Import.objects.filter(border__intersects=rec.object.border, active=True)
+        #if overlaps.exists():
+        #    if rec.object.id == overlaps.first().id:
+        #        return JsonResponse(status=400, data=dict(status="already done"))
+        #    return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
+        #                                              rec=json.loads(serialize('json', overlaps))))
         rec.save()
     for network in networks:
         network.save()
