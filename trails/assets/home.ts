@@ -135,29 +135,36 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
 
     const popup = new mapboxgl.Popup()
       .setLngLat(JSON.parse(coordinates))
-      .setHTML(description)
       .addTo(map);
+
+    // TODO: react would be useful...
+    const setHtml = (html: string) => {
+      popup.setHTML(html);
+      const zoomLink = document.getElementById(`${park.properties.id}-zoom`);
+      zoomLink.onclick = () => {
+        map.fitBounds(JSON.parse(park.properties.bb));
+      };
+      if (park.properties.circuit_status == "undone") {
+        const el = document.getElementById(park.properties.id);
+        if (el != null) {
+          el.onclick = async () => {
+            const resp = await computeGpx(park.properties.id);
+            setHtml(resp.html);
+          };
+        }
+      }
+    };
+    setHtml(description);
+    //popup.addTo(map);
 
     const refresh = setInterval(async () => {
       const resp = await downloadNetwork(park.properties.id);
-      popup.setHTML(resp.html);
+      setHtml(resp.html);
     }, 5000);
-    if (park.properties.circuit_status == "undone") {
-      const el = document.getElementById(park.properties.id);
-      el.onclick = async () => {
-        const resp = await computeGpx(park.properties.id);
-        popup.setHTML(resp.html);
-      };
-    }
 
     popup.on("close", () => {
       clearInterval(refresh);
     });
-
-    const zoomLink = document.getElementById(`${park.properties.id}-zoom`);
-    zoomLink.onclick = () => {
-      map.fitBounds(JSON.parse(park.properties.bb));
-    };
   });
 };
 
