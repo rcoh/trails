@@ -17,5 +17,7 @@ def export(target):
         networks = serialize('json', page)
         import_obj = serialize('json', [most_recent_import])
         resp = requests.post(f"{target}/api/import", json=dict(import_record=import_obj, networks=networks))
+        if not resp.ok:
+            import pdb; pdb.set_trace()
         print(resp.content)
     #print(resp.json())

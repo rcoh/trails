@@ -96,10 +96,6 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
   map.on("mouseenter", "parks-layer", function (e) {
     map.getCanvas().style.cursor = "pointer";
   });
-  map.on("moveend", (e) => {
-    loadVisibleParks(map);
-  });
-
   map.on("mousemove", "parks-layer", function (e) {
     if (e.features.length > 0) {
       if (hoveredParkId != null) {
@@ -208,6 +204,10 @@ const setupMap = async (center: any, perimeter: any) => {
     })
   );
   map.on("load", async () => await loadVisibleParks(map));
+  map.on("moveend", () => {
+    loadVisibleParks(map);
+  });
+
   return map;
 };
 (async () => {

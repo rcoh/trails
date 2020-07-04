@@ -266,6 +266,8 @@ class OSMIngestor:
         osm_loader.apply_file(str(filename), locations=True)
         trails = osm_loader.trails
         for node_ids in extra_links or []:
+            if not all(n in osm_loader.trail_nodes for n in node_ids):
+                continue
             trails[sum(node_ids)] = Trail(
                 nodes=[osm_loader.trail_nodes[n] for n in node_ids],
                 way_id=f'extra-{node_ids[0]}-{node_ids[1]}',
