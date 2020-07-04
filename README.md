@@ -56,3 +56,22 @@ From inside the docker container:
 python manage.py import_data /trail-data/<somefile>.osm
 ```
 It may take a bit to download the elevation tiles.
+
+## Dokku Initialization
+```
+dokku apps:create est
+sudo dokku plugin:install https://github.com/dokku/dokku-postgres.git
+sudo dokku plugin:install https://github.com/dokku/dokku-redis.git redis
+export POSTGRES_IMAGE="mdillon/postgis" 
+export POSTGRES_IMAGE_VERSION="latest"
+dokku postgres:create est-db
+dokku postgres:link est est-db
+
+dokku plugin:install https://github.com/dokku/dokku-letsencrypt.git
+dokku config:set --no-restart est DOKKU_LETSENCRYPT_EMAIL=rcoh@rcoh.me
+dokku domains:set est everysingletrail.com
+
+dokku letsencrypt est
+
+
+```
