@@ -124,13 +124,13 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
     hoveredParkId = null;
   });
 
-  map.on("click", "parks-layer", function (e) {
+  map.on("click", "parks-layer", async function (e) {
     const park = e.features[0];
     const coordinates = park.properties.center;
-    const description = park.properties.description;
 
     const popup = new mapboxgl.Popup()
       .setLngLat(JSON.parse(coordinates))
+      .setHTML("loading...")
       .addTo(map);
 
     // TODO: react would be useful...
@@ -140,17 +140,15 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
       zoomLink.onclick = () => {
         map.fitBounds(JSON.parse(park.properties.bb));
       };
-      if (park.properties.circuit_status == "undone") {
-        const el = document.getElementById(park.properties.id);
-        if (el != null) {
-          el.onclick = async () => {
-            const resp = await computeGpx(park.properties.id);
-            setHtml(resp.html);
-          };
-        }
+      const el = document.getElementById(park.properties.id);
+      if (el != null) {
+        el.onclick = async () => {
+          const resp = await computeGpx(park.properties.id);
+          setHtml(resp.html);
+        };
       }
     };
-    setHtml(description);
+    setHtml((await downloadNetwork(park.properties.id)).html);
     //popup.addTo(map);
 
     const refresh = setInterval(async () => {

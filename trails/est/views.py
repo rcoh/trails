@@ -93,14 +93,6 @@ def circuit_description(network: TrailNetwork):
         return recompute_html
 
 
-def circuit_status(network: TrailNetwork):
-    circuit = Circuit.objects.filter(network=network).first()
-    if circuit is not None:
-        return "complete"
-    else:
-        return "undone"
-
-
 def html_description(network: TrailNetwork) -> str:
     return f"""
         <h4>{network.name}</h4>
@@ -130,9 +122,7 @@ def areas(request):
                 id=i,
                 type='Feature',
                 properties=dict(
-                    circuit_status=circuit_status(network),
                     id=network.id,
-                    description=html_description(network),
                     fill_color='#' + COLORS[i % len(COLORS)],
                     center=[network.poly.centroid.x, network.poly.centroid.y],
                     bb=[network.poly.extent[0:2], network.poly.extent[2:4]],
