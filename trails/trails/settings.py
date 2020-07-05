@@ -49,6 +49,9 @@ SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
 if IS_PROD:
+    import sentry_sdk
+    from sentry_sdk.integrations.django import DjangoIntegration
+
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
     DATABASES = {
@@ -57,6 +60,14 @@ if IS_PROD:
     }
     SRTM_CACHE_DIR = "/osm/srtm"
     SRTMV4_BASE_DIR = "/osm/srtmv4"
+    sentry_sdk.init(
+        dsn="https://df55f3928ccf4b39bbb6942d2a4b99d2@o416116.ingest.sentry.io/5309799",
+        integrations=[DjangoIntegration()],
+
+        # If you wish to associate users to errors (assuming you are using
+        # django.contrib.auth) you may enable sending PII data.
+        send_default_pii=True
+    )
 else:
     DATABASES = {
         "default": {
@@ -70,6 +81,8 @@ else:
     }
     SRTM_CACHE_DIR = os.path.expanduser("~/.cache/srtm")
     SRTMV4_BASE_DIR = "/trail-data/srtm/"
+    
+
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
