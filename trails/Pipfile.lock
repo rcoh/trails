@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "8861ad2ffc8d717dddb8dcc8fdb6d3f28822d543b1772c83a8f249acf633b106"
+            "sha256": "459ef2575a35d1d82229b2996e87ff95619b87b7bd4d6f70fe5a682f2c4b2a35"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -76,10 +76,10 @@
         },
         "click": {
             "hashes": [
-                "sha256:d2b5255c7c6349bc1bd1e59e08cd12acbbd63ce649f2588755783aa94dfb6b1a",
-                "sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc"
+                "sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13",
+                "sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"
             ],
-            "version": "==7.1.2"
+            "version": "==7.0"
         },
         "click-plugins": {
             "hashes": [
@@ -136,11 +136,11 @@
         },
         "django-click": {
             "hashes": [
-                "sha256:1803979cbe328333ec935c8ddfbf03da40f94f3361585cf4142ac7c4da2d5fde",
-                "sha256:d46cc7abcd5d7e612dcd75ba56bf57ee404d62de7d09c7c3397fa1f475c9c753"
+                "sha256:0e68df3c3892476305befe6b48002319ee2304baa3d4fafc302517c1d81ac7dc",
+                "sha256:239a760223b0fd6f12baac03e97c2081fdbb061c3eccbbe95a7b0d805426f3de"
             ],
             "index": "pypi",
-            "version": "==2.1.0"
+            "version": "==2.1.1"
         },
         "django-cors-headers": {
             "hashes": [
@@ -484,6 +484,14 @@
             "index": "pypi",
             "version": "==1.5.2"
         },
+        "sentry-sdk": {
+            "hashes": [
+                "sha256:da06bc3641e81ec2c942f87a0676cd9180044fa3d1697524a0005345997542e2",
+                "sha256:e80d61af85d99a1222c1a3e2a24023618374cd50a99673aa7fa3cf920e7d813b"
+            ],
+            "index": "pypi",
+            "version": "==0.16.0"
+        },
         "six": {
             "hashes": [
                 "sha256:30639c035cdb23534cd4aa2dd52c3bf48f06e5f4a941509c8bafd8ce11080259",
@@ -625,10 +633,10 @@
         },
         "click": {
             "hashes": [
-                "sha256:d2b5255c7c6349bc1bd1e59e08cd12acbbd63ce649f2588755783aa94dfb6b1a",
-                "sha256:dacca89f4bfadd5de3d7489b7c8a566eee0d3676333fbb50030263894c38c0dc"
+                "sha256:2335065e6395b9e67ca716de5f7526736bfa6ceead690adf616d925bdc622b13",
+                "sha256:5b94b49521f6456670fdb30cd82a4eca9412788a93fa6dd6df72c94d5a8ff2d7"
             ],
-            "version": "==7.1.2"
+            "version": "==7.0"
         },
         "decorator": {
             "hashes": [

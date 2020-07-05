@@ -31,6 +31,7 @@ dj-database-url = "*"
 whitenoise = "*"
 celery = "*"
 redis = "*"
+sentry-sdk = "*"
 
 [dev-packages]
 mypy = "*"
