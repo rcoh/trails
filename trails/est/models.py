@@ -25,6 +25,7 @@ class BaseModel(models.Model):
 class Import(BaseModel):
     border = models.PolygonField()
     active = models.BooleanField()
+    name = models.TextField(blank=True)
 
 
 class TrailNetwork(BaseModel):

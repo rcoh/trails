@@ -30,7 +30,7 @@ def import_data(osm_data, parallelism):
     loader = OSMIngestor(Settings)
     loader.load_osm(osm_data, extra_links=[(885729040, 827103027)])
     #e.TrailNetwork.objects.all().delete()
-    import_obj = e.Import(active=True, border=Polygon())
+    import_obj = e.Import(active=True, border=Polygon(), name=str(osm_data))
     import_obj.save()
     networks = []
     p = Pool(parallelism)
