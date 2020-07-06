@@ -61,7 +61,7 @@ def external_import(request):
         #        return JsonResponse(status=400, data=dict(status="already done"))
         #    return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
         #                                              rec=json.loads(serialize('json', overlaps))))
-        rec.active = False
+        rec.object.active = False
         rec.save()
     for network in networks:
         network.save()
@@ -107,7 +107,7 @@ def html_description(network: TrailNetwork) -> str:
         """
 
 
-def network(request, network_id):
+def get_network(request, network_id):
     network = TrailNetwork.objects.get(id=network_id)
     existing_circuit = Circuit.objects.filter(network=network).first()
     circuit_id = None
@@ -133,7 +133,9 @@ MAX_AREAS = 10000
 def areas(request):
     data: AreasRequest = cattr.structure(json.loads(request.body), AreasRequest)
     bounds = data.to_poly()
-    networks = TrailNetwork.active().filter(poly__intersects=bounds)
+    view_area = bounds.area
+    minumum_park_size = view_area / 5000
+    networks = TrailNetwork.active().filter(poly__intersects=bounds, area__gt=minumum_park_size)
     geojson = dict(
         type='FeatureCollection',
         features=[

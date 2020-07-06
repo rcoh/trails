@@ -26,6 +26,8 @@ class Import(BaseModel):
     border = models.PolygonField()
     active = models.BooleanField()
     name = models.TextField(blank=True)
+    complete = models.BooleanField(default=True)
+    sha256_sum = models.TextField(default='old')
 
 
 class TrailNetwork(BaseModel):
@@ -33,8 +35,10 @@ class TrailNetwork(BaseModel):
     name = models.TextField()
     # Just for rendering
     trails = models.MultiLineStringField(dim=2)
-    poly = models.PolygonField(dim=2)
+    poly = models.PolygonField(dim=2, srid=4326)
     total_length = MeasurementField(measurement=Distance)
+
+    area = models.FloatField(db_index=True)
 
     trailheads = models.MultiPointField(dim=2)
 

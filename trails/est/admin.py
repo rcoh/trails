@@ -4,7 +4,7 @@ from est.models import Import
 
 
 class ImportAdmin(admin.ModelAdmin):
-    list_display = ("num_parks", "active", "name", "updated_at")
+    list_display = ("num_parks", "active", "name", "updated_at", "complete")
     readonly_fields = ("num_parks",)
 
     def num_parks(self, obj: Import):

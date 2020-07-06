@@ -11,6 +11,6 @@ urlpatterns = [
     path('api/circuit/<str:network_id>/', views.compute_circuit, name='circuits'),
     path('api/circuit/<str:circuit_id>/gpx', views.gpx, name='gpx'),
     path('api/circuit/<str:circuit_id>/json', views.circuit_json, name='circuit-json'),
-    path('api/network/<str:network_id>/', views.network, name='network'),
+    path('api/network/<str:network_id>/', views.get_network, name='network'),
     path('api/import', csrf_exempt(views.external_import), name='import'),
 ]
