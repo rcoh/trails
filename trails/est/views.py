@@ -114,6 +114,14 @@ def network(request, network_id):
         circuit_id = existing_circuit.id
     return JsonResponse(data=dict(
         html=html_description(network=network),
+        trailheads=dict(
+            type='FeatureCollection',
+            features=[dict(
+                id=i,
+                type='Feature',
+                geometry=json.loads(trailhead.json)
+            ) for i, trailhead in enumerate(network.trailheads)]
+        ),
         circuit_id=circuit_id
     ))
 

@@ -9,11 +9,11 @@ from typing import List, Dict, NamedTuple, Iterator, Optional, Set, Tuple
 import geopy.distance
 import networkx as nx
 import osmium as o
+from django.contrib.gis.geos import Polygon, MultiPolygon, Point, MultiPoint
 from measurement.measures import Distance
-from tqdm import tqdm
 
 from osm import util
-from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node, BoundingBox
+from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node, NodeId
 from osm.util import window
 
 TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
@@ -21,6 +21,7 @@ INACCESSIBLE = {"service"}
 BAD_FOOTWAYS = {"sidewalk", "crossing"}
 
 PARKS = {"park", "nature_reserve"}
+PARKISH_BOUNDARIES = {"national_park", "protected_area"}
 
 
 def is_trail(way):
@@ -60,7 +61,7 @@ class LocationFilter(NamedTuple):
     radius_km: float
 
     def tup(self):
-        return (self.lat, self.lon)
+        return self.lat, self.lon
 
     def digest(self):
         return hashlib.sha1(
@@ -69,9 +70,31 @@ class LocationFilter(NamedTuple):
 
 
 class Park(NamedTuple):
-    bounding_box: BoundingBox
+    border: MultiPolygon
     name: str
     tags: Dict[str, str]
+
+    @classmethod
+    def name_from_tags(cls, tags: Dict[str, str]):
+        if 'name' in tags:
+            return tags['name']
+        if tags.get('landuse') == 'conservation':
+            if tags.get('ownership') == 'municipal' and 'owner' in tags:
+                return f'{tags["owner"]} Conservation Land'
+            else:
+                return 'Conservation Land'
+
+        if tags.get('ownership') == 'municipal' and tags.get('owner') is not None:
+            extra = ''
+            if tags.get('leisure') == 'nature_reserve':
+                extra = 'Nature Preserve'
+            elif tags.get('boundary') == 'protected_area':
+                extra = 'Protected Area'
+            return f'{tags["owner"]} {extra}'
+        elif len(tags) > 1:
+            pass
+            # print('Unable to get a name: ', tags)
+        return 'Unnamed park'
 
 
 def tags_to_dict(tags):
@@ -88,14 +111,15 @@ class OsmiumTrailLoader(o.SimpleHandler):
         self.areas: Dict[int, Park] = {}
 
     def area(self, area):
-        if area.tags.get('leisure') in PARKS:
-            bb = BoundingBox.from_nodes([node for ring in list(area.outer_rings()) for node in ring])
-            if bb is not None:
-                self.areas[area.id] = Park(bb, area.tags.get('name', 'unknown'), tags_to_dict(area.tags))
+        if area.tags.get('leisure') in PARKS or area.tags.get("boundary") in PARKISH_BOUNDARIES:
+            border = MultiPolygon([Polygon([Point(n.lon, n.lat) for n in ring]) for ring in area.outer_rings()])
+            if border is not None:
+                tag_map = tags_to_dict(area.tags)
+                self.areas[area.id] = Park(border, Park.name_from_tags(tag_map), tag_map)
 
     def way(self, w):
         if drivable(w):
-            node_ids = {n.ref: w.tags.get("name", "No name") for n in w.nodes}
+            node_ids: Dict[int, str] = {n.ref: w.tags.get("name", "No name") for n in w.nodes}
             self.non_trail_nodes.update(node_ids)
         if "highway" in w.tags:
             if self.location_filter:
@@ -258,9 +282,11 @@ class OSMIngestor:
         self.trailnetwork_results: Dict[
             TrailNetwork, Dict[Trailhead, TrailheadResult]
         ] = {}
+        self.pool = Pool(1)
 
-    def load_osm(self, filename: Path, extra_links: List[Tuple[int, int]] = None, parallelism=1):
-        self.pool = Pool(parallelism)
+    def load_osm(self, filename: Path, extra_links: List[Tuple[int, int]] = None, no_road_crossings=True):
+        if extra_links is None:
+            extra_links = []
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         print(f"Loading trails from {filename}")
         osm_loader.apply_file(str(filename), locations=True)
@@ -271,37 +297,15 @@ class OSMIngestor:
             trails[sum(node_ids)] = Trail(
                 nodes=[osm_loader.trail_nodes[n] for n in node_ids],
                 way_id=f'extra-{node_ids[0]}-{node_ids[1]}',
-                name='Manually added trail'
+                name='Manually added trail',
+                manual=True
             )
         self.parks = osm_loader.areas
         print(f"Importing {len(trails)} trails and {len(osm_loader.areas)} areas")
         self.trails.update(trails)
         self.non_trail_nodes.update(osm_loader.non_trail_nodes)
-        self.add_trails_to_graph(trails.values(), no_road_crossings=True)
-
-    def ingest_file(self, filename: Path, parallelism=1) -> Iterator[NetworkResult]:
-        # TODO: figure out file bounds, delete data within those bounds
-        osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
-        print(f"Loading trails from {filename}")
-        osm_loader.apply_file(str(filename), locations=True)
-        trails = osm_loader.trails
-        self.parks = osm_loader.areas
-        print(f"Importing {len(trails)} trails and {len(osm_loader.areas)} areas")
-        self.trails.update(trails)
-        self.non_trail_nodes.update(osm_loader.non_trail_nodes)
-        self.pool = Pool(parallelism)
-        self.add_trails_to_graph(trails.values())
-        print(f'Trails loaded into graph')
-
-        networks_to_process = [
-            (network, self.ingest_settings) for network in self.trail_networks()
-        ]
-
-        results_iter = tqdm(util.pmap(networks_to_process, proc_network, self.pool), total=len(networks_to_process))
-
-        tqdm.write(f"Loading networks into DB")
-        for (network, result) in results_iter:
-            yield NetworkResult(network, result)
+        self.add_trails_to_graph(trails.values(), no_road_crossings=no_road_crossings,
+                                 dont_touch=set([e for link in extra_links for e in link]))
 
     def apply_location_filter(self, trails: Dict[int, Trail]) -> Dict[int, Trail]:
         res = {}
@@ -320,8 +324,12 @@ class OSMIngestor:
             res = trails
         return res
 
-    def add_trails_to_graph(self, new_trails, no_road_crossings=False):
-        segmented_trails = segment_trails(new_trails, set(self.non_trail_nodes.keys()))
+    def add_trails_to_graph(self, new_trails, dont_touch: Set[int], no_road_crossings=False):
+        non_trail_nodes = set(self.non_trail_nodes.keys())
+        segmented_trails = segment_trails(new_trails, non_trail_nodes)
+        if no_road_crossings:
+            disconnect_road_crossings(segmented_trails, non_trail_nodes, dont_touch)
+
         G = self.global_graph
         for trail in segmented_trails:
             G.add_node(trail.nodes[0]),
@@ -335,7 +343,8 @@ class OSMIngestor:
         assert len(lengths) == len(segmented_trails)
         ids = set()
         for trail, length in zip(segmented_trails, lengths):
-            if no_road_crossings and all(node.id in self.non_trail_nodes for node in (trail.nodes[0], trail.nodes[-1])):
+            if no_road_crossings and all(
+                    node.osm_id in self.non_trail_nodes for node in (trail.nodes[0], trail.nodes[-1])):
                 continue
             ids.add(trail.id)
             G.add_edge(
@@ -350,16 +359,19 @@ class OSMIngestor:
         G = self.global_graph
         for c in nx.connected_components(G):
             subgraph = G.subgraph(c)
-            if subgraph.size(weight='weight') < 5:
+            if subgraph.size(weight='weight') < 2.4:
                 continue
             subgraph = subgraph.copy()
-            network_bb = BoundingBox.from_nodes(c)
+            network_border = MultiPoint([Point(x=n.lon, y=n.lat) for n in c]).convex_hull
+            network_area = network_border.area
             name = None
-            if network_bb is not None:
-                (best_park, best_overlap) = None, None
+            if network_border is not None:
+                (best_park, best_overlap) = None, 0
                 for park in self.parks.values():
-                    p_overlap = park.bounding_box.intersection_pct(network_bb)
-                    if best_overlap is None or p_overlap > best_overlap:
+                    if not park.border.intersects(network_border):
+                        continue
+                    p_overlap = network_border.intersection(park.border).area / network_area
+                    if p_overlap > best_overlap:
                         best_park = park
                         best_overlap = p_overlap
 
@@ -371,8 +383,7 @@ class OSMIngestor:
                 self.ingest_settings.trailhead_distance_threshold,
                 name
             )
-            if network.total_length() > Distance(km=5):
-                yield network
+            yield network
 
     def trailheads(self) -> Iterator[Trailhead]:
         for network in self.trail_networks():
@@ -380,7 +391,21 @@ class OSMIngestor:
                 yield trailhead
 
 
-def segment_trails(trails: List[Trail], non_trail_nodes: Set[int]):
+def build_derived_id(trail_id: str, node_id: int):
+    return NodeId(f"{node_id}-{trail_id}-road-extra")
+
+
+def disconnect_road_crossings(trails: List[Trail], non_trail_nodes: Set[int], dont_touch: Set[int]):
+    for trail in trails:
+        for index in (0, -1):
+            node = trail.nodes[index]
+            if node.osm_id in dont_touch:
+                continue
+            if node.osm_id in non_trail_nodes:
+                trail.nodes[index] = node._replace(derived_id=build_derived_id(trail.way_id, node.osm_id))
+
+
+def segment_trails(trails: List[Trail], non_trail_nodes: Set[int]) -> List[Trail]:
     """Returns a new list of trails where all intersections are at the start or end"""
     graph = InverseGraph()
     for trail in trails:
@@ -390,7 +415,7 @@ def segment_trails(trails: List[Trail], non_trail_nodes: Set[int]):
     for trail in trails:
         split_idxs = []
         for (i, node) in enumerate(trail.nodes[1:-1], 1):
-            if len(graph.node_trail_map[node.id]) > 1 or node.id in non_trail_nodes:
+            if len(graph.node_trail_map[node.osm_id]) > 1 or node.osm_id in non_trail_nodes:
                 split_idxs.append(i)
 
         if split_idxs:

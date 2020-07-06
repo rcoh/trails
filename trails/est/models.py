@@ -36,6 +36,8 @@ class TrailNetwork(BaseModel):
     poly = models.PolygonField(dim=2)
     total_length = MeasurementField(measurement=Distance)
 
+    trailheads = models.MultiPointField(dim=2)
+
     # Pickled representation of the networkx graph
     graph = models.BinaryField()
 

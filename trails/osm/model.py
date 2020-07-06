@@ -3,8 +3,8 @@ import os
 import random
 import time
 from collections import defaultdict, Counter
-from functools import reduce
-from typing import NamedTuple, List, Iterator, Dict, Optional
+from typing import NamedTuple, List, Iterator, Dict, Optional, Tuple
+from typing import NewType
 
 import geopy.distance
 import gpxpy
@@ -15,9 +15,11 @@ from measurement.measures import Distance
 from networkx.classes.graphviews import SubGraph
 from srtm.main import FileHandler
 
-from osm import elevations, util
+from osm import elevations
 from osm.util import memoize, window, verify_identical_nodes
 from trails.settings import SRTM_CACHE_DIR
+
+NodeId = NewType('NodeId', str)
 
 
 class CustomFileHandler(FileHandler):
@@ -36,9 +38,14 @@ elevation = srtm.get_data(
 
 
 class Node(NamedTuple):
-    id: int
+    osm_id: int
+    derived_id: NodeId
     lat: float
     lon: float
+
+    @property
+    def id(self):
+        return self.osm_id
 
     def elevation(self):
         try:
@@ -57,40 +64,6 @@ class Node(NamedTuple):
 
     def to_point(self):
         return Point(x=self.lon, y=self.lat)
-
-
-class BoundingBox:
-    def __init__(self, top_left: Node, bottom_right: Node):
-        self.top_left = top_left
-        self.bottom_right = bottom_right
-
-    def __repr__(self):
-        return f"({self.top_left}) -> ({self.bottom_right})"
-
-    @classmethod
-    def from_nodes(cls, nodes):
-        min_lat = None
-        min_lon = None
-        max_lat = None
-        max_lon = None
-        for node in nodes:
-            if min_lat is None or node.lat < min_lat:
-                min_lat = node.lat
-            if min_lon is None or node.lon < min_lon:
-                min_lon = node.lon
-            if max_lat is None or node.lat > max_lat:
-                max_lat = node.lat
-            if max_lon is None or node.lon > max_lon:
-                max_lon = node.lon
-        if min_lon == max_lon or max_lat == min_lat:
-            return None
-        return BoundingBox(Node(-1, min_lat, min_lon), Node(-1, max_lat, max_lon))
-
-    def intersection_pct(self, other: 'BoundingBox'):
-        return util.bounding_box_intersection(
-            dict(x1=self.top_left.lon, x2=self.bottom_right.lon, y1=self.top_left.lat, y2=self.bottom_right.lat),
-            dict(x1=other.top_left.lon, x2=other.bottom_right.lon, y1=other.top_left.lat, y2=other.bottom_right.lat)
-        )
 
 
 class ElevationChange(NamedTuple):
@@ -132,10 +105,6 @@ class ElevationChange(NamedTuple):
             for point in gpx_segment.points:
                 point.elevation = -1
             return gpx_segment
-            # raise
-            # time.sleep(1)
-            # print("error while adding elevations", ex)
-            # return ElevationChange.to_elevated_gps(nodes, retries - 1)
 
     @classmethod
     def elevations(cls, nodes: Iterator[Node]):
@@ -150,11 +119,16 @@ class ElevationChange(NamedTuple):
 
 
 class Trail:
-    def __init__(self, nodes, way_id, name: Optional[str], derived_id=None):
+    def __init__(self, nodes: List[Node], way_id, name: Optional[str], derived_id=None, manual: bool = False):
         self.nodes = nodes
         self.way_id: str = way_id
         self.id = derived_id or way_id
         self.name = name
+        # Manually inserted fake segment to help with closing loops
+        self.manual = manual
+
+    def end_points(self) -> Tuple[Node, Node]:
+        return self.nodes[0], self.nodes[-1]
 
     def points(self):
         return [n.to_point() for n in self.nodes]
@@ -177,7 +151,8 @@ class Trail:
 
     @classmethod
     def from_way(cls, way):
-        nodes = [Node(node.ref, node.lat, node.lon) for node in way.nodes]
+        nodes = [Node(osm_id=node.ref, derived_id=NodeId(str(node.ref)), lat=node.lat, lon=node.lon) for node in
+                 way.nodes]
         id = str(way.id)
 
         if way.tags.get("name"):
@@ -298,24 +273,9 @@ class TrailNetwork:
     def __hash__(self):
         return self.unique_id().__hash__()
 
-    """
-    def bounding_box(self):
-        top_left = None
-        bottom_right = None
-        for trail in self.trail_segments():
-            for node in trail.nodes():
-                if top_left is None:
-                    top_left = node
-                if bottom_right is None:
-                    bottom_right = node
-    """
-
     @memoize
     def trail_names(self):
-        names = set()
-        for edge in self.graph.edges:
-            names.union({v['name'] for _, v in self.graph[edge[0]][edge[1]].items()})
-        return names
+        return {name for _, _, name in self.graph.edges.data('name')}
 
     def trail_segments(self) -> Iterator[Trail]:
         yield from segments_for_graph(self.graph)
@@ -357,9 +317,6 @@ class Subpath:
         self.unique_length_m = unique_length_m
 
         assert self.segment_dist.keys() == set([s.id for s in self.trail_segments])
-
-    def record_node(self, node: Node, tracker):
-        tracker.update({node.id})
 
     def compute_intersections(self):
         res = defaultdict(set)

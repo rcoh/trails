@@ -8,6 +8,7 @@ let parks: Feature[] = [];
 
 interface NetworkResp {
   html: string;
+  trailheads: FeatureCollection;
   circuit_id?: string;
 }
 
@@ -185,7 +186,24 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
         };
       }
     };
-    setHtml(await downloadNetwork(park.properties.id));
+    const network = await downloadNetwork(park.properties.id);
+    setHtml(network);
+    const sourceId = `trailheads-${park.properties.id}`;
+    if (map.getSource(sourceId) == null) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: network.trailheads,
+      });
+      map.addLayer({
+        id: sourceId,
+        type: "symbol",
+        source: sourceId,
+        layout: {
+          "icon-image": "car-11",
+          "icon-allow-overlap": true,
+        },
+      });
+    }
 
     const refresh = setInterval(async () => {
       const resp = await downloadNetwork(park.properties.id);
