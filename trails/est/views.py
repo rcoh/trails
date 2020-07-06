@@ -61,6 +61,7 @@ def external_import(request):
         #        return JsonResponse(status=400, data=dict(status="already done"))
         #    return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
         #                                              rec=json.loads(serialize('json', overlaps))))
+        rec.active = False
         rec.save()
     for network in networks:
         network.save()
