@@ -222,10 +222,12 @@ class TrailNetwork:
             subgraph: SubGraph,
             nontrail_nodeset: Dict[int, str],
             distance_threshold: Distance,
-            name: Optional[str] = None
+            digest: str,
+            name: Optional[str] = None,
     ) -> None:
         self.graph = subgraph
         self.name = name
+        self.digest = digest
         max_trailheads = int(self.total_length().km) // 2
         raw_trailheads = [
             Trailhead(node, nontrail_nodeset[node.id])

@@ -81,8 +81,6 @@ else:
     }
     SRTM_CACHE_DIR = os.path.expanduser("~/.cache/srtm")
     SRTMV4_BASE_DIR = "/trail-data/srtm/"
-    
-
 
 REST_FRAMEWORK = {
     # Use Django's standard `django.contrib.auth` permissions,
@@ -122,7 +120,7 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
 ]
 
-INTERNAL_IPS = ["127.0.0.1"]
+INTERNAL_IPS = ["127.0.0.1", "172.24.0.1"]
 
 CORS_ORIGIN_ALLOW_ALL = True
 
@@ -139,6 +137,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "est.context_processors.react_mode"
             ]
         },
     }

@@ -41,6 +41,9 @@ class TrailNetwork(BaseModel):
     # Pickled representation of the networkx graph
     graph = models.BinaryField()
 
+    # Hex digest of the input nodes
+    digest = models.TextField(default='')
+
     def clean_name(self):
         return re.sub(r'\W+', '', self.name)
 

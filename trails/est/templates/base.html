@@ -4,6 +4,7 @@
     <!-- Required meta tags -->
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    {% if debug is not True %}
     <!-- Global site tag (gtag.js) - Google Analytics -->
     <script async src="https://www.googletagmanager.com/gtag/js?id=UA-111671237-5"></script>
     <script>
@@ -13,6 +14,7 @@
 
       gtag('config', 'UA-111671237-5');
     </script>
+    {% endif %}
 
 
     {% block head %}{% endblock %}
@@ -40,4 +42,6 @@
     </div>
 </nav>
 {% block content%}{% endblock %}
+  <script src="https://unpkg.com/react@16/umd/react.{{ react_version }}.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@16/umd/react-dom.{{ react_version }}.js" crossorigin></script>
 </body>

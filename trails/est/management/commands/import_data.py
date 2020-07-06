@@ -17,7 +17,8 @@ from osm.loader import IngestSettings, DefaultQualitySettings, OSMIngestor
 @click.command()
 @click.argument('osm-data', type=click.Path(exists=True))
 @click.option('--parallelism', '-p', type=click.INT, default=1)
-def import_data(osm_data, parallelism):
+@click.option('--resume/--no-result', default=False)
+def import_data(osm_data, resume, parallelism):
     Settings = IngestSettings(
         max_distance=Distance(km=50),
         max_segments=300,
@@ -25,13 +26,23 @@ def import_data(osm_data, parallelism):
         quality_settings=DefaultQualitySettings,
         location_filter=None,
     )
-    e.Import.objects.all().update(active=False)
+    if not resume:
+        e.Import.objects.all().update(active=False)
+        import_obj = e.Import(active=True, border=Polygon(), name=str(osm_data))
+        import_obj.save()
+        digests = set()
+    else:
+        import_obj = e.Import.objects.order_by('-updated_at').first()
+        if not click.confirm(
+                f'Resuming import {import_obj.name}, last modified {import_obj.updated_at} currently containing {import_obj.networks.count()} trail networks'):
+            return 1
+        # TODO: probably n queries
+        digests = {n.digest for n in import_obj.networks.all()}
+    print(f'{len(digests)} loaded')
     loader = OSMIngestor(Settings)
     loader.load_osm(osm_data, extra_links=[(885729040, 827103027)])
-    import_obj = e.Import(active=True, border=Polygon(), name=str(osm_data))
-    import_obj.save()
     networks = []
-    for network in tqdm(loader.trail_networks()):
+    for network in tqdm(loader.trail_networks(already_processed=digests)):
         try:
             multiline_strs = MultiLineString([LineString(trail.points()) for trail in network.trail_segments()])
 
@@ -50,7 +61,8 @@ def import_data(osm_data, parallelism):
                 poly=border,
                 total_length=network.total_length(),
                 graph=pickle.dumps(network.graph),
-                trailheads=trailheads
+                trailheads=trailheads,
+                digest=network.digest
             )
             est_network.save()
             networks.append(est_network)

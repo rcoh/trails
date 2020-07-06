@@ -90,19 +90,7 @@ def test_trail_network(test_data, huddart_trails):
     assert len(matching) == 1
     huddart = matching[0]
 
-    # Currently being named "Purisima"
-    # assert huddart.name == 'Huddart Park'
     assert huddart.total_length_km() == pytest.approx(58.38, rel=0.1)
-    # gmap = gmplot.GoogleMapPlotter(37.4684697, -122.2895862, 13)
-
-    ## Node in the center of the park on a service road
-    # for trailhead in huddart.trailheads:
-    #    print("marking", trailhead)
-    #    gmap.marker(trailhead.node.lat, trailhead.node.lon, title=trailhead.node.id)
-
-    # for trail in huddart.trail_segments():
-    #    trail.draw(gmap)
-    # gmap.draw("out.html")
     trailhead_ids = [trailhead.node.id for trailhead in huddart.trailheads]
 
     # On a "service" road that is accessible [access=permissive]
@@ -113,6 +101,13 @@ def test_trail_network(test_data, huddart_trails):
 
     # highway=steps
     assert 462124623 not in trailhead_ids
+
+
+def test_road_splitting(test_data):
+    ingestor = OSMIngestor(TestSettings)
+    ingestor.load_osm(test_data / "walden-pond.osm")
+    networks = list(ingestor.trail_networks())
+    assert len(networks) == 3
 
 
 def test_sidewalk_filter(test_data):

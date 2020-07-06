@@ -9,7 +9,7 @@ from typing import List, Dict, NamedTuple, Iterator, Optional, Set, Tuple
 import geopy.distance
 import networkx as nx
 import osmium as o
-from django.contrib.gis.geos import Polygon, MultiPolygon, Point, MultiPoint
+from django.contrib.gis.geos import Polygon, MultiPolygon, Point, MultiPoint, GEOSException
 from measurement.measures import Distance
 
 from osm import util
@@ -291,7 +291,7 @@ class OSMIngestor:
         print(f"Loading trails from {filename}")
         osm_loader.apply_file(str(filename), locations=True)
         trails = osm_loader.trails
-        for node_ids in extra_links or []:
+        for node_ids in extra_links:
             if not all(n in osm_loader.trail_nodes for n in node_ids):
                 continue
             trails[sum(node_ids)] = Trail(
@@ -331,9 +331,13 @@ class OSMIngestor:
             disconnect_road_crossings(segmented_trails, non_trail_nodes, dont_touch)
 
         G = self.global_graph
+        special = []
         for trail in segmented_trails:
+            special += [node for node in trail.nodes if 4583062189 == node.osm_id]
             G.add_node(trail.nodes[0]),
             G.add_node(trail.nodes[-1])
+        print('\n  '.join([str(s) for s in special]))
+        assert len(set(special)) == len(special)
 
         segments = [(s,) for s in segmented_trails]
         lengths = util.pmap(
@@ -347,6 +351,10 @@ class OSMIngestor:
                     node.osm_id in self.non_trail_nodes for node in (trail.nodes[0], trail.nodes[-1])):
                 continue
             ids.add(trail.id)
+            if trail.nodes[0] in special:
+                print(trail.nodes[0], trail.nodes[-1])
+            if trail.nodes[-1] in special:
+                print(trail.nodes[0], trail.nodes[-1])
             G.add_edge(
                 trail.nodes[0],
                 trail.nodes[-1],
@@ -355,25 +363,41 @@ class OSMIngestor:
                 trail=trail,
             )
 
-    def trail_networks(self):
+    def trail_networks(self, already_processed: Set[str] = None):
         G = self.global_graph
         for c in nx.connected_components(G):
+            #intersecting = [n for n in c if n.osm_id == 3268105766]
+            #if intersecting:
+            #    import pdb; pdb.set_trace()
+            #print('intersection: ', len(intersecting), intersecting)
+            digest = hashlib.sha256(''.join(sorted(str(n) for n in c)).encode('utf-8')).hexdigest()
+            if already_processed is not None and digest in already_processed:
+                continue
+            if len(c) < 3:
+                continue
             subgraph = G.subgraph(c)
+            # ignore parks less than 2.4km long
             if subgraph.size(weight='weight') < 2.4:
                 continue
             subgraph = subgraph.copy()
             network_border = MultiPoint([Point(x=n.lon, y=n.lat) for n in c]).convex_hull
             network_area = network_border.area
+            if network_area == 0:
+                print('Warning: network with 0 area, ignoring')
+                continue
             name = None
             if network_border is not None:
                 (best_park, best_overlap) = None, 0
                 for park in self.parks.values():
                     if not park.border.intersects(network_border):
                         continue
-                    p_overlap = network_border.intersection(park.border).area / network_area
-                    if p_overlap > best_overlap:
-                        best_park = park
-                        best_overlap = p_overlap
+                    try:
+                        p_overlap = network_border.intersection(park.border).area / network_area
+                        if p_overlap > best_overlap:
+                            best_park = park
+                            best_overlap = p_overlap
+                    except GEOSException as err:
+                        print(f'Error {err} for {park.name}')
 
                 if best_overlap > 0:
                     name = best_park.name
@@ -381,7 +405,8 @@ class OSMIngestor:
                 subgraph,
                 self.non_trail_nodes,
                 self.ingest_settings.trailhead_distance_threshold,
-                name
+                digest=digest,
+                name=name
             )
             yield network
 
@@ -391,8 +416,10 @@ class OSMIngestor:
                 yield trailhead
 
 
-def build_derived_id(trail_id: str, node_id: int):
-    return NodeId(f"{node_id}-{trail_id}-road-extra")
+def build_derived_id(trail: Trail, node_id: int):
+    # important to potentially used a derived id here since a trail might
+    # be split crossing a road
+    return NodeId(f"{node_id}-{trail.id}-road-extra")
 
 
 def disconnect_road_crossings(trails: List[Trail], non_trail_nodes: Set[int], dont_touch: Set[int]):
@@ -402,7 +429,7 @@ def disconnect_road_crossings(trails: List[Trail], non_trail_nodes: Set[int], do
             if node.osm_id in dont_touch:
                 continue
             if node.osm_id in non_trail_nodes:
-                trail.nodes[index] = node._replace(derived_id=build_derived_id(trail.way_id, node.osm_id))
+                trail.nodes[index] = node._replace(derived_id=build_derived_id(trail, node.osm_id))
 
 
 def segment_trails(trails: List[Trail], non_trail_nodes: Set[int]) -> List[Trail]:
