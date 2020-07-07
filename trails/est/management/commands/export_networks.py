@@ -12,9 +12,9 @@ def export(target):
     imports = e.Import.objects.order_by('-updated_at')
     for most_recent_import in imports:
         if not click.confirm(
-                f'Importing {most_recent_import.networks.count()} networks imported {most_recent_import.created_at}'):
+                f'Importing {most_recent_import.networks.count()} networks ({most_recent_import.name}) imported {most_recent_import.created_at}'):
             continue
-        p = Paginator(most_recent_import.networks.all(), 4)
+        p = Paginator(most_recent_import.networks.all().order_by('id'), 8)
         for i in p.page_range:
             page = p.page(i)
             networks = serialize('json', page)

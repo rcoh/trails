@@ -24,7 +24,7 @@ class BaseModel(models.Model):
 
 class Import(BaseModel):
     border = models.PolygonField()
-    active = models.BooleanField()
+    active = models.BooleanField(db_index=True)
     name = models.TextField(blank=True)
     complete = models.BooleanField(default=True)
     sha256_sum = models.TextField(default='old')
