@@ -13,5 +13,6 @@ urlpatterns = [
     path('api/circuit/<str:circuit_id>/json', views.circuit_json, name='circuit-json'),
     path('api/network/<str:network_id>/', views.get_network, name='network'),
     path('api/import', csrf_exempt(views.external_import), name='import'),
-    path('api/import/<str:import_id>/', views.import_ids, name='import-ids')
+    path('api/import/<str:import_id>/', views.import_ids, name='import-ids'),
+    path('api/status', views.status, name='status')
 ]

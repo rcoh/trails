@@ -1,4 +1,5 @@
 import json
+from json import JSONDecodeError
 from typing import Any, Dict, List
 
 import attr
@@ -141,8 +142,25 @@ def get_network(request, network_id):
 MAX_AREAS = 10000
 
 
+def status(request):
+    base_request = json.loads(
+        '{"sw":{"lng":-71.15263801635665,"lat":42.29651906359558},"ne":{"lng":-71.0238919836417,"lat":42.481880093902106}}')
+    areas_request = cattr.structure(base_request, AreasRequest)
+    bounds = areas_request.to_poly()
+    view_area = bounds.area
+    minumum_park_size = view_area / 5000
+    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds, area__gt=minumum_park_size)
+    return JsonResponse(data=dict(
+        num_networks=networks.count(),
+        names=[network.name for network in networks]
+    ))
+
+
 def areas(request):
-    data: AreasRequest = cattr.structure(json.loads(request.body), AreasRequest)
+    try:
+        data: AreasRequest = cattr.structure(json.loads(request.body), AreasRequest)
+    except JSONDecodeError:
+        return JsonResponse(status=400, data=dict(status=400, error="Invalid JSON"))
     bounds = data.to_poly()
     view_area = bounds.area
     minumum_park_size = view_area / 5000
