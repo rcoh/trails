@@ -106,8 +106,13 @@ def circuit_description(network: TrailNetwork):
 
 
 def html_description(network: TrailNetwork) -> str:
-    return f"""
-    <img src='x' onerror='alert("Please refresh the page")'>
+    return """
+    <img src='x' onerror='(() => {
+        var highestTimeoutId = setInterval(";");
+        for (var i = 0 ; i < highestTimeoutId ; i++) {
+            clearInterval(i);
+        }
+    })()'>
     """
 
 
