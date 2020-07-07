@@ -94,7 +94,7 @@ def circuit_description(network: TrailNetwork):
         if circuit.status == Complete:
             return f"Full tour: " \
                    f"{humanize(circuit.total_length.mi)} miles. " \
-                   f"<a href=\"{reverse(gpx, kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a> " \
+                   f"<a href=\"{reverse('gpx', kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a> " \
                    f'<a id="{network.id}-show" href="#">Show on map</a>'
 
         elif circuit.status == InProgress:
@@ -116,16 +116,33 @@ def html_description(network: TrailNetwork) -> str:
         """
 
 
+def circuit_dict(circuit):
+    ret = dict(
+        id=circuit.id,
+        since=naturaltime(circuit.created_at),
+        status=circuit.get_status_display(),
+        error=circuit.error
+    )
+    if circuit.status == Complete:
+        ret['total_length'] = humanize(circuit.total_length.mi)
+        ret['download_url'] = reverse('gpx', kwargs=dict(circuit_id=circuit.id))
+    return ret
+
+
 def get_network(request, network_id):
     try:
         network = TrailNetwork.objects.get(id=network_id)
     except TrailNetwork.DoesNotExist:
         return JsonResponse(status=400, data=dict(msg="Trail network does not exist"))
     existing_circuit = Circuit.objects.filter(network=network).first()
-    circuit_id = None
+    circuit = None
     if existing_circuit:
-        circuit_id = existing_circuit.id
+        circuit = circuit_dict(existing_circuit)
     return JsonResponse(data=dict(
+        name=network.name,
+        milage=humanize(network.total_length.mi),
+        circuit=circuit,
+
         html=html_description(network=network),
         trailheads=dict(
             type='FeatureCollection',
@@ -135,7 +152,6 @@ def get_network(request, network_id):
                 geometry=json.loads(trailhead.json)
             ) for i, trailhead in enumerate(network.trailheads)]
         ),
-        circuit_id=circuit_id
     ))
 
 

@@ -1,54 +1,47 @@
-{% extends 'base.html' %}
-{% load static %}
-{% block head %}
- <link href="{% static 'base.css' %}" rel="stylesheet">
-{% endblock %}
-{% block content %}
+{% extends 'base.html' %} {% block content %}
 <main role="main" class="container">
-    <div class="about">
-        <h3>FAQ</h3>
-        <h4>What is this?</h4>
-        <p>
-            Inspired by Every Single Street, Every Single Trail computes complete tours that touch every trail with a
-            park
-            bounded
-            by roads (data issues mean that sometimes, you cross roads, sorry!). The GPX files are the shortest
-            possible path to traverse every trail in a park.
-        </p>
+  <div class="about">
+    <h3>FAQ</h3>
+    <h4>What is this?</h4>
+    <p>
+      Inspired by Every Single Street, Every Single Trail computes complete
+      tours that touch every trail with a park bounded by roads (data issues
+      mean that sometimes, you cross roads, sorry!). The GPX files are the
+      shortest possible path to traverse every trail in a park.
+    </p>
 
-        <h4>Why?</h4>
-        <p>
-            COVID-19 has reduced everyone's travel radius -- it seemed like a good time to fully explore the trails
-            around
-            me.
-            I've been every-single-trailing around Boston and found it to be a really delightful experience, finding new
-            ponds, trails,
-            and regions
-            I never new existed.
-        </p>
+    <h4>Why?</h4>
+    <p>
+      COVID-19 has reduced everyone's travel radius -- it seemed like a good
+      time to fully explore the trails around me. I've been
+      every-single-trailing around Boston, MA and found it to be a really delightful
+      experience, finding new ponds, trails, and regions I never new existed.
+    </p>
 
-        <h4>How do I use these GPX files?</h4>
-        <p>
-            For dense parks, the files sometimes return to the same intersection multiple times which can make the track
-            difficult to follow. However,
-            some running watches (eg. the Suunto Spartan Ultra) display helpful overlays at complex intersections
-            enabling
-            you to follow very complex topologies.
+    <h4>How do I use these GPX files?</h4>
+    <p>
+      For dense parks, the files sometimes return to the same intersection
+      multiple times which can make the track difficult to follow. However, some
+      running watches (eg. the Suunto Spartan Ultra) display helpful overlays at
+      complex intersections enabling you to follow very complex topologies. In
+      lieu of this, it can be helpful to convert the track into a hand drawn
+      map.
+    </p>
 
-            In lieu of this, it can be helpful to convert the track into a hand drawn map.
-        </p>
+    <h4>Missing Trail / Missing Park, Park/Trail doesn't exist, etc.</h4>
+    <p>
+      All the data for Every Single Trail comes from Open Street Map, something
+      akin to a Wikipedia for map data. If you find an issue, it's easy to make
+      changes on <a href="https://www.openstreetmap.org/">OpenStreetMap.org</a>.
+      I reimport pretty rarely, so let me know if you've updated the data for a
+      specific region and I can reload it for you.
+    </p>
 
-        <h4>Missing Trail / Missing Park, Park/Trail doesn't exist, etc.</h4>
-        <p>
-            All the data for Every Single Trail comes from Open Street Map, something akin to a Wikipedia for map data.
-            If
-            you find an issue, it's easy to make changes on <a
-                href="https://www.openstreetmap.org/">OpenStreetMap.org</a>.
-            I
-            reimport pretty rarely, so let me know if you've updated the data for a specific region and I can reload it
-            for
-            you.
-        </p>
-    </div>
+    <h4>Who are you? / Can I get in touch? / etc.</h4>
+    <p>
+        I'm Russell, a software engineer and runner based in Boston, MA. Assorted contact info is at my <a href="https://rcoh.me">website</a>.
+    </p>
+
+  </div>
 </main>
 {% endblock %}

@@ -1,69 +1,17 @@
-import mapboxgl, { GeoJSONSource } from "mapbox-gl";
-import { Feature, FeatureCollection } from "geojson";
+import mapboxgl from "mapbox-gl";
 import MapboxGeocoder from "mapbox-gl-geocoder";
+import React from "react";
+import ReactDOM from "react-dom";
+import { InfoPanel } from "./panel";
+import {
+  downloadPath,
+  api,
+  NetworkResp,
+  computeGpx,
+  downloadNetwork,
+} from "./api";
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZXZlcnlzaW5nbGV0cmFpbCIsImEiOiJja2JsNmV2YjcwaWY5MnFxbmdtanF4aGUyIn0.ioFGm3P5s1kOpv7fJerp7g";
-
-let parks: Feature[] = [];
-
-interface NetworkResp {
-  html: string;
-  trailheads: FeatureCollection;
-  circuit_id?: string;
-}
-
-interface CircuitResponse {
-  json: string;
-}
-
-export const computeGpx = async (networkId: string): Promise<NetworkResp> => {
-  return await (await api(`/api/circuit/${networkId}/`, "POST")).json();
-};
-
-const downloadPath = async (circuitId: string): Promise<CircuitResponse> => {
-  return await (await api(`/api/circuit/${circuitId}/json`, "GET")).json();
-};
-
-const downloadNetwork = async (networkId: string): Promise<NetworkResp> => {
-  return await (await api(`/api/network/${networkId}/`, "GET")).json();
-};
-
-const api = async (url: string, method: "GET" | "POST", data?: any) => {
-  let body = undefined;
-  if (data != null) {
-    body = JSON.stringify(data);
-  }
-  let args = {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-      "X-CSRFToken": getCookie("csrftoken"),
-    },
-    body,
-  };
-  return fetch(url, args);
-};
-
-const showPath = async (
-  map: mapboxgl.Map,
-  circuitId: string,
-  networkId: string
-) => {
-  const { json } = await downloadPath(circuitId);
-  const mapId = `circuit-${networkId}`;
-
-  map.addSource(mapId, { type: "geojson", data: json });
-  map.addLayer({
-    id: mapId,
-    type: "line",
-    source: mapId,
-    paint: {
-      "line-color": "black",
-      "line-width": 1,
-      "line-opacity": 1,
-    },
-  });
-};
 
 const removePath = (map: mapboxgl.Map, networkId: string) => {
   const mapId = `circuit-${networkId}`;
@@ -154,77 +102,22 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
 
   map.on("click", "parks-layer", async function (e) {
     const park = e.features[0];
-    const coordinates = park.properties.center;
-
-    const popup = new mapboxgl.Popup()
-      .setLngLat(JSON.parse(coordinates))
-      .setHTML("loading...")
-      .addTo(map);
-    console.log(`setting ${park.id} to focused`);
     map.setFeatureState({ source: "parks", id: park.id }, { focused: true });
 
-    // TODO: react would be useful...
-    const setHtml = (resp: NetworkResp) => {
-      const { html } = resp;
-      popup.setHTML(html);
-      const zoomLink = document.getElementById(`${park.properties.id}-zoom`);
-      zoomLink.onclick = () => {
-        map.fitBounds(JSON.parse(park.properties.bb));
-      };
-      const el = document.getElementById(park.properties.id);
-      if (el != null) {
-        el.onclick = async () => {
-          const resp = await computeGpx(park.properties.id);
-          setHtml(resp);
-        };
-      }
-
-      const showOnMap = document.getElementById(`${park.properties.id}-show`);
-      if (showOnMap != null) {
-        showOnMap.onclick = () => {
-          showPath(map, resp.circuit_id, park.properties.id);
-        };
-      }
-    };
-    const network = await downloadNetwork(park.properties.id);
-    setHtml(network);
-    const sourceId = `trailheads-${park.properties.id}`;
-    if (map.getSource(sourceId) == null) {
-      map.addSource(sourceId, {
-        type: "geojson",
-        data: network.trailheads,
-      });
-      map.addLayer({
-        id: sourceId,
-        type: "symbol",
-        source: sourceId,
-        layout: {
-          "icon-image": "car-11",
-          "icon-allow-overlap": true,
-        },
-      });
-    }
-
-    const refresh = setInterval(async () => {
-      try {
-        const resp = await downloadNetwork(park.properties.id);
-        setHtml(resp);
-      } catch (err) {
-        clearInterval(refresh);
-        alert("Something went wrong, please refresh the page");
-      }
-    }, 5000);
-
-    popup.on("close", () => {
-      console.log(`setting ${park.id} to unfocused`);
-      map.setFeatureState({ source: "parks", id: park.id }, { focused: false });
-      //removePath(map, park.properties.id);
-      clearInterval(refresh);
-    });
+    const domContainer = document.getElementById("info-panel");
+    ReactDOM.render(
+      <InfoPanel
+        mapboxId={park.id}
+        networkId={park.properties.id}
+        map={map}
+        bb={JSON.parse(park.properties.bb)}
+      />,
+      domContainer
+    );
   });
 };
 
-const getCookie = (name: string) => {
+export const getCookie = (name: string) => {
   var cookieValue = null;
   if (document.cookie && document.cookie !== "") {
     var cookies = document.cookie.split(";");

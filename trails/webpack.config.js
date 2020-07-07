@@ -2,11 +2,13 @@ const path = require('path');
 const BundleTracker = require('webpack-bundle-tracker')
 
 module.exports = {
-  entry: './assets/home.ts',
+  entry: './ts/home.tsx',
   //context: __dirname,
   externals: {
     'mapbox-gl': 'mapboxgl',
-    'mapbox-gl-geocoder': 'MapboxGeocoder'
+    'mapbox-gl-geocoder': 'MapboxGeocoder',
+    'react': 'React',
+    'react-dom': 'ReactDOM',
   },
   devtool: 'inline-source-map',
   module: {

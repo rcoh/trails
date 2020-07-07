@@ -1,20 +1,21 @@
-{% extends 'base.html' %}
-{% load render_bundle from webpack_loader %}
+{% extends 'base.html' %} {% load render_bundle from webpack_loader %}
 <!DOCTYPE html lang="en">
 <html xmlns="http://www.w3.org/1999/html">
-{% block head %}
-    <link href='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css' rel='stylesheet'/>
-    <script src='https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js'></script>
+  {% block head %}
+  <link
+    href="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.css"
+    rel="stylesheet"
+  />
+  <script src="https://api.mapbox.com/mapbox-gl-js/v1.11.0/mapbox-gl.js"></script>
 
-    <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.5.1/mapbox-gl-geocoder.min.js"></script>
-    <link
-            rel="stylesheet"
-            href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.5.1/mapbox-gl-geocoder.css"
-            type="text/css"
-    />
-{% endblock %}
-
-{% block content %}
-<div id='map' style='width: 100%; height:90%'></div>
-{% render_bundle 'main' %}
-{% endblock %}
+  <script src="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.5.1/mapbox-gl-geocoder.min.js"></script>
+  <link
+    rel="stylesheet"
+    href="https://api.mapbox.com/mapbox-gl-js/plugins/mapbox-gl-geocoder/v4.5.1/mapbox-gl-geocoder.css"
+    type="text/css"
+  />
+  {% endblock %} {% block content %}
+  <div id="map" style="width: 100%; flex-basis: 100%"></div>
+  <div id="info-panel"></div>
+  {% render_bundle 'main' %} {% endblock %}
+</html>

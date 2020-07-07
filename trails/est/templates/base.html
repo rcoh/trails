@@ -1,47 +1,72 @@
+{% load static %}
 <!DOCTYPE html lang="en">
 <html xmlns="http://www.w3.org/1999/html">
-<head>
+  <head>
     <!-- Required meta tags -->
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, shrink-to-fit=no"
+    />
+ <link href="{% static 'base.css' %}" rel="stylesheet">
     {% if debug is not True %}
     <!-- Global site tag (gtag.js) - Google Analytics -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=UA-111671237-5"></script>
+    <script
+      async
+      src="https://www.googletagmanager.com/gtag/js?id=UA-111671237-5"
+    ></script>
     <script>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
+      function gtag() {
+        dataLayer.push(arguments);
+      }
+      gtag("js", new Date());
 
-      gtag('config', 'UA-111671237-5');
+      gtag("config", "UA-111671237-5");
     </script>
-    {% endif %}
+    {% endif %} {% block head %}{% endblock %}
+    <script
+      src="https://unpkg.com/react@16/umd/react.{{ react_version }}.js"
+      crossorigin
+    ></script>
+    <script
+      src="https://unpkg.com/react-dom@16/umd/react-dom.{{ react_version }}.js"
+      crossorigin
+    ></script>
 
-
-    {% block head %}{% endblock %}
-
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
-          integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+    <link
+      rel="stylesheet"
+      href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+      integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk"
+      crossorigin="anonymous"
+    />
     <title>Every Single Trail</title>
-</head>
-<body>
-<nav class="navbar navbar-expand navbar-light bg-light">
-    <a class="navbar-brand" href="/">Every Single Trail</a>
-    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-    </button>
+  </head>
+  <body>
+    <div style="height: 100%; display: flex; flex-direction: column;">
+      <nav class="navbar navbar-expand navbar-light bg-light">
+        <a class="navbar-brand" href="/">Every Single Trail</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-toggle="collapse"
+          data-target="#navbarSupportedContent"
+          aria-controls="navbarSupportedContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
 
-    <div class="collapse navbar-collapse" id="navbarSupportedContent">
-        <ul class="navbar-nav mr-auto">
-            <li class="nav-item active">
-                <a class="nav-link" href="/">Home <span class="sr-only">(current)</span></a>
-            </li>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+          <ul class="navbar-nav mr-auto">
             <li class="nav-item">
-                <a class="nav-link" href="/about">What is this?</a>
+              <a class="nav-link" href="/about">What is this?</a>
             </li>
-        </ul>
+          </ul>
+        </div>
+      </nav>
+      {% block content%}{% endblock %}
     </div>
-</nav>
-{% block content%}{% endblock %}
-  <script src="https://unpkg.com/react@16/umd/react.{{ react_version }}.js" crossorigin></script>
-  <script src="https://unpkg.com/react-dom@16/umd/react-dom.{{ react_version }}.js" crossorigin></script>
-</body>
+  </body>
+</html>
