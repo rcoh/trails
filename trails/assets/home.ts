@@ -206,8 +206,13 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
     }
 
     const refresh = setInterval(async () => {
-      const resp = await downloadNetwork(park.properties.id);
-      setHtml(resp);
+      try {
+        const resp = await downloadNetwork(park.properties.id);
+        setHtml(resp);
+      } catch (err) {
+        clearInterval(refresh);
+        alert("Something went wrong, please refresh the page");
+      }
     }, 5000);
 
     popup.on("close", () => {

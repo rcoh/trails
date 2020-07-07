@@ -111,7 +111,7 @@ def get_network(request, network_id):
     try:
         network = TrailNetwork.objects.get(id=network_id)
     except TrailNetwork.DoesNotExist:
-        return JsonResponse(status=404, data=dict(msg="Trail network does not exist"))
+        return JsonResponse(status=400, data=dict(msg="Trail network does not exist"))
     existing_circuit = Circuit.objects.filter(network=network).first()
     circuit_id = None
     if existing_circuit:
@@ -138,7 +138,7 @@ def areas(request):
     bounds = data.to_poly()
     view_area = bounds.area
     minumum_park_size = view_area / 5000
-    networks = TrailNetwork.active().filter(poly__intersects=bounds, area__gt=minumum_park_size)
+    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds, area__gt=minumum_park_size)
     geojson = dict(
         type='FeatureCollection',
         features=[
