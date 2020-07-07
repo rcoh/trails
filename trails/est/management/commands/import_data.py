@@ -24,18 +24,17 @@ def import_state(state):
     if not os.path.exists(data_path):
         subprocess.run(['curl', BASE_URL.format(cleaned), '-o', data_path], capture_output=True)
     with open(output, 'w') as out:
-        subprocess.run(['python', 'manage.py', 'import_data', '--file', data_path], stdout=out)
+        import_from_file(data_path, resume=True)
+        #subprocess.run(['python', 'manage.py', 'import_data', '--file', data_path], stdout=out)
     return state
 
 
 def import_states_file(states_file):
     with open(states_file) as f:
-        states = [(s,) for s in f.readlines()]
+        states = f.readlines()
 
-    p = Pool(processes=6)
-
-    for state in util.pmap(states, import_state, p):
-        print(f'Finished {state}')
+    for state in states:
+        import_state(state)
 
 
 @click.command()
@@ -64,7 +63,8 @@ def import_from_file(osm_data, resume: bool):
     )
     digest = sha256_digest(osm_data)
     print('Digest: ', digest)
-    if not resume:
+    previous_import = e.Import.objects.filter(complete=False, sha256_sum=digest).order_by('-updated_at').first()
+    if not resume or previous_import is None:
         if e.Import.objects.filter(sha256_sum=digest, complete=True):
             print('Import already done!')
             return
@@ -73,7 +73,7 @@ def import_from_file(osm_data, resume: bool):
         import_obj.save()
         digests = set()
     else:
-        import_obj = e.Import.objects.filter(complete=False, sha256_sum=digest).order_by('-updated_at').first()
+        import_obj = previous_import
         if not click.confirm(
                 f'Resuming import {import_obj.name}, last modified {import_obj.updated_at} currently containing {import_obj.networks.count()} trail networks'):
             return 1
@@ -102,6 +102,7 @@ def import_from_file(osm_data, resume: bool):
                 poly=border,
                 total_length=network.total_length(),
                 graph=pickle.dumps(network.graph),
+                area=border.area,
                 trailheads=trailheads,
                 digest=network.digest
             )

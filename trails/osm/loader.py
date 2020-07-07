@@ -1,7 +1,5 @@
 import hashlib
 import itertools
-import random
-import time
 from multiprocessing.pool import Pool
 from pathlib import Path
 from typing import List, Dict, NamedTuple, Iterator, Optional, Set, Tuple
@@ -14,7 +12,6 @@ from measurement.measures import Distance
 
 from osm import util
 from osm.model import Trail, InverseGraph, TrailNetwork, Subpath, Trailhead, Node, NodeId
-from osm.util import window
 
 TRAIL = {"path", "footway", "track", "trail", "pedestrian", "steps"}
 INACCESSIBLE = {"service"}
@@ -187,27 +184,6 @@ def worth_keeping(loop: Subpath):
         return loop.quality() > MIN_QUALITY and loop.num_spurs() < 1
 
 
-def proc_network(network, settings) -> Tuple[TrailNetwork, Dict[Trailhead, TrailheadResult]]:
-    ret: Dict[Trailhead, TrailheadResult] = {}
-    for trailhead in network.trailheads:
-        start_time = time.time()
-        new_loops = list(find_loops_from_root(network, trailhead.node, settings))
-        # Produce about 1 loop per 5k of trails
-        target_loop_number = int(network.total_length().km // 5)
-        new_loops = sorted(new_loops, key=lambda l: -1 * l.quality())
-        new_loops = [loop for loop in new_loops if worth_keeping(loop)]
-        new_loops = new_loops[: target_loop_number * 3]
-        new_loops = filter_similar(new_loops, 0.75)
-        # TODO: hide bad routes in the UI?
-        for loop in new_loops:
-            loop.elevation_change()
-
-        end_time = time.time()
-        metadata = meta(network, new_loops, time=end_time - start_time)
-        ret[trailhead] = TrailheadResult(new_loops, metadata)
-    return network, ret
-
-
 def meta(
         trail_network: TrailNetwork, loops: List[Subpath], time: float
 ) -> TrailheadMeta:
@@ -270,7 +246,7 @@ def trail_length_km(trail):
 
 
 class OSMIngestor:
-    def __init__(self, ingest_settings: Optional[IngestSettings] = None) -> None:
+    def __init__(self, ingest_settings: Optional[IngestSettings] = None, parallelism: int = 4) -> None:
         if ingest_settings is None:
             ingest_settings = DefaultIngestSettings
         self.ingest_settings = ingest_settings
@@ -282,7 +258,7 @@ class OSMIngestor:
         self.trailnetwork_results: Dict[
             TrailNetwork, Dict[Trailhead, TrailheadResult]
         ] = {}
-        self.pool = Pool(1)
+        self.pool = Pool(parallelism)
 
     def load_osm(self, filename: Path, extra_links: List[Tuple[int, int]] = None, no_road_crossings=True):
         if extra_links is None:
@@ -290,6 +266,7 @@ class OSMIngestor:
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         print(f"Loading trails from {filename}")
         osm_loader.apply_file(str(filename), locations=True)
+        print(f"Loaded from {filename}")
         trails = osm_loader.trails
         for node_ids in extra_links:
             if not all(n in osm_loader.trail_nodes for n in node_ids):
@@ -366,10 +343,10 @@ class OSMIngestor:
     def trail_networks(self, already_processed: Set[str] = None):
         G = self.global_graph
         for c in nx.connected_components(G):
-            #intersecting = [n for n in c if n.osm_id == 3268105766]
-            #if intersecting:
+            # intersecting = [n for n in c if n.osm_id == 3268105766]
+            # if intersecting:
             #    import pdb; pdb.set_trace()
-            #print('intersection: ', len(intersecting), intersecting)
+            # print('intersection: ', len(intersecting), intersecting)
             digest = hashlib.sha256(''.join(sorted(str(n) for n in c)).encode('utf-8')).hexdigest()
             if already_processed is not None and digest in already_processed:
                 continue
@@ -464,120 +441,3 @@ def problematic_network(network):
         return True
     else:
         return False
-
-
-MAX_SEARCH = 20
-
-
-def find_loops_from_root(
-        trail_network: TrailNetwork, root: Node, settings: IngestSettings
-):
-    max_segments = settings.max_segments
-    max_distance = settings.max_distance
-    max_concurrent = settings.max_concurrent
-    if problematic_network(trail_network):
-        return
-
-    random.seed(735)
-    subgraph = trail_network.graph
-    num_edges = len(subgraph.edges)
-
-    max_segments = min(num_edges, max_segments)
-    max_distance = min(max_distance, trail_network.total_length() * 1.1)
-    max_distance_m = max_distance.m
-    active_paths = [Subpath.from_startnode(root)]
-    stop_searching_thresh = min(max(1, int(trail_network.total_length().km / 4)), 20)
-    exit_thresh = min(max(int(trail_network.total_length().km / 2), 1), 20)
-    max_length_target = min(max_distance, settings.stop_searching_cutoff)
-    length_target_met = True
-    loops_yielded = 0
-    start_time = time.time()
-
-    def timeout() -> bool:
-        now = time.time()
-        return now - start_time > settings.timeout_s
-
-    layers = 0
-    while (
-            active_paths
-            and (not timeout())
-            and (loops_yielded < exit_thresh or (not length_target_met))
-    ):
-        layers += 1
-        filtered_paths = []
-        for path in active_paths:
-            if (
-                    path.length_m < max_distance_m
-                    and len(path.trail_segments) < max_segments
-            ):
-                filtered_paths.append(path)
-        active_paths = filtered_paths
-        final_paths = []
-        if len(active_paths) > max_concurrent:
-            active_paths = sorted(active_paths, key=lambda path: -1 * path.quality())
-            active_paths = [p for p in active_paths if p.quality() > 0.5]
-            if loops_yielded < stop_searching_thresh:
-                pruned_paths = [
-                                   p
-                                   for p in active_paths[max_concurrent:]
-                                   if p.length_m > SHORTEST_LOOP.m / 2
-                               ][:MAX_SEARCH]
-                for path in pruned_paths:
-                    back_to_root = nx.shortest_path(
-                        subgraph,
-                        source=path.last_node(),
-                        target=path.first_node(),
-                        weight="weight",
-                    )
-                    for (n1, n2) in window(back_to_root):
-                        edge = subgraph[n1][n2]
-                        path = path.add_node(edge["trail"], mutate=True)
-                    assert path.is_complete()
-                    if worth_keeping(path):
-                        loops_yielded += 1
-                        if path.length_m >= max_length_target.m:
-                            length_target_met = True
-                        yield path
-                    if loops_yielded > stop_searching_thresh:
-                        break
-            # active_paths = filter_similar(active_paths, 0.90)
-            active_paths = active_paths[:max_concurrent]
-        for path in active_paths:
-            options = list(dict(subgraph[path.last_node()]).items())
-            for next_node, next_trail in options:
-                if (
-                        next_trail["trail"].id == path.trail_segments[-1].id
-                        and len(options) > 1
-                ):
-                    continue
-                new_path = path.add_node(next_trail["trail"])
-                if new_path.is_complete():
-                    if worth_keeping(new_path):
-                        loops_yielded += 1
-                        if path.length_m >= max_length_target.m:
-                            length_target_met = True
-                        yield new_path
-                else:
-                    final_paths.append(new_path)
-        active_paths = final_paths
-
-
-def filter_similar(subpaths: List[Subpath], max_similarity):
-    to_drop = set()
-    for (p1, p2) in itertools.combinations(subpaths, 2):
-        # 20% length difference
-        if abs((p2.length_m - p1.length_m) / p2.length_m) < 0.2:
-            if p2.similarity(p1) > max_similarity:
-                to_drop.add(p2)
-    assert to_drop == set() or len(to_drop) < len(subpaths), f"{to_drop}, {subpaths}"
-    ret = [p for p in subpaths if p not in to_drop]
-
-    return ret
-
-
-def evaluate_quality_metrics(subpaths: List[Subpath]):
-    pass
-    # distance histogram
-    # elevation histogram
-    # similarity metrics
-    # quality metrics
