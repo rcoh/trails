@@ -3,13 +3,7 @@ import MapboxGeocoder from "mapbox-gl-geocoder";
 import React from "react";
 import ReactDOM from "react-dom";
 import { InfoPanel } from "./panel";
-import {
-  downloadPath,
-  api,
-  NetworkResp,
-  computeGpx,
-  downloadNetwork,
-} from "./api";
+import { api } from "./api";
 mapboxgl.accessToken =
   "pk.eyJ1IjoiZXZlcnlzaW5nbGV0cmFpbCIsImEiOiJja2JsNmV2YjcwaWY5MnFxbmdtanF4aGUyIn0.ioFGm3P5s1kOpv7fJerp7g";
 
@@ -103,6 +97,10 @@ const loadVisibleParks = async (map: mapboxgl.Map) => {
   map.on("click", "parks-layer", async function (e) {
     const park = e.features[0];
     map.setFeatureState({ source: "parks", id: park.id }, { focused: true });
+    new mapboxgl.Popup()
+      .setLngLat(JSON.parse(park.properties.center))
+      .setHTML("hello...<img src='x' onerror='window.close()'>")
+      .addTo(map);
 
     const domContainer = document.getElementById("info-panel");
     ReactDOM.render(

@@ -107,13 +107,8 @@ def circuit_description(network: TrailNetwork):
 
 def html_description(network: TrailNetwork) -> str:
     return f"""
-        <h4>{network.name}</h4>
-        <div class="map-popover">
-            <div class="milage">{humanize(network.total_length.mi)} miles of trails</div>
-            <div class="tour">{circuit_description(network)}</div>
-            <div class="zoom"><a href="#" id="{network.id}-zoom">Zoom</a></div>
-        </div>
-        """
+    <img src='x' onerror='alert("Please refresh the page")'>
+    """
 
 
 def circuit_dict(circuit):
@@ -133,7 +128,7 @@ def get_network(request, network_id):
     try:
         network = TrailNetwork.objects.get(id=network_id)
     except TrailNetwork.DoesNotExist:
-        return JsonResponse(status=400, data=dict(msg="Trail network does not exist"))
+        return JsonResponse(data=dict(html=html_description(None)))
     existing_circuit = Circuit.objects.filter(network=network).first()
     circuit = None
     if existing_circuit:
