@@ -32,6 +32,7 @@ whitenoise = "*"
 celery = "*"
 redis = "*"
 sentry-sdk = "*"
+django-structlog = "*"
 
 [dev-packages]
 mypy = "*"
