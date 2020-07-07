@@ -148,15 +148,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "trails.wsgi.application"
 
-# Database
-# https://docs.djangoproject.com/en/2.1/ref/settings/#databases
-
-SPATIALITE_LIBRARY_PATH = "mod_spatialite.so"
-
-# DEBUG_TOOLBAR_PANELS = [
-#    'djdt_flamegraph.FlamegraphPanel'
-# ]
-
 # Password validation
 # https://docs.djangoproject.com/en/2.1/ref/settings/#auth-password-validators
 
@@ -214,16 +205,16 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "json_formatter",
         },
-        #"json_file": {
+        # "json_file": {
         #    "class": "logging.handlers.WatchedFileHandler",
         #    "filename": "logs/json.log",
         #    "formatter": "json_formatter",
-        #},
-        #"flat_line_file": {
+        # },
+        # "flat_line_file": {
         #    "class": "logging.handlers.WatchedFileHandler",
         #    "filename": "logs/flat_line.log",
         #    "formatter": "key_value",
-        #},
+        # },
     },
     "loggers": {
         "django_structlog": {
@@ -231,10 +222,10 @@ LOGGING = {
             "level": "INFO",
             'propagate': False,
         },
-        #"django_structlog_demo_project": {
+        # "django_structlog_demo_project": {
         #    "handlers": ["console", "flat_line_file", "json_file"],
         #    "level": "INFO",
-        #},
+        # },
     }
 }
 

@@ -14,7 +14,10 @@ def export(target):
         if not click.confirm(
                 f'Importing {most_recent_import.networks.count()} networks ({most_recent_import.name}) imported {most_recent_import.created_at}'):
             continue
-        p = Paginator(most_recent_import.networks.all().order_by('id'), 8)
+        loaded = requests.get(f"{target}/api/import/{most_recent_import.id}/").json()
+        print(f'{len(loaded["ids"])} already loaded')
+        #ids = [network.id for network in most_recent_import.networks]
+        p = Paginator(most_recent_import.networks.exclude(id__in=loaded['ids']).order_by('id'), 8)
         for i in p.page_range:
             page = p.page(i)
             networks = serialize('json', page)

@@ -50,6 +50,14 @@ class ExternalImport:
     networks: str
 
 
+def import_ids(request, import_id):
+    import_obj = Import.objects.prefetch_related('networks').filter(id=import_id).first()
+    if import_obj is None:
+        return JsonResponse(data=dict(ids=[], msg="Import not loaded yet"))
+    else:
+        return JsonResponse(data=dict(ids=[network.id for network in import_obj.networks.all()]))
+
+
 def external_import(request):
     data: ExternalImport = cattr.structure(json.loads(request.body), ExternalImport)
     import_record = deserialize('json', data.import_record)
