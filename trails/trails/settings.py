@@ -48,6 +48,8 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_BROWSER_XSS_FILTER = True
 X_FRAME_OPTIONS = "DENY"
 
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+
 if IS_PROD:
     import sentry_sdk
     from sentry_sdk.integrations.django import DjangoIntegration
