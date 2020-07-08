@@ -1,4 +1,5 @@
-# trailsto.run
+# Every Single Trail
+https://everysingletrail.com
 
 ## Local Development
 Clone the backend:
