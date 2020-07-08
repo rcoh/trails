@@ -180,7 +180,7 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
     return (
       <div className="info-panel">
         <div className="info-header">
-          <h4>{network.name}</h4>
+          <h4>{network.name || "Unnamed Area"}</h4>
           <button
             type="button"
             className="close"

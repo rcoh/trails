@@ -133,7 +133,7 @@ def get_network(request, network_id: str):
     ))
 
 
-MAX_AREAS = 10000
+MAX_AREAS = 1000000
 
 
 def status(request):
@@ -150,8 +150,10 @@ def status(request):
     ))
 
 
+MAX_TO_RETURN = 300
+
+
 def areas(request):
-    MAX_TO_RETURN = 500
     try:
         data: AreasRequest = cattr.structure(json.loads(request.body), AreasRequest)
     except JSONDecodeError:

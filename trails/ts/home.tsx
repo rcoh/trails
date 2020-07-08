@@ -13,13 +13,18 @@ const removePath = (map: mapboxgl.Map, networkId: string) => {
   map.removeSource(mapId);
 };
 
+let controller = new AbortController();
 const loadVisibleParks = async (map: mapboxgl.Map) => {
+  // abort any requests in progress
+  controller.abort();
+  // make a new controller
+  controller = new AbortController();
   let hoveredParkId: string | number;
   const bounds = map.getBounds();
   const visibleAreas = await api("/api/areas", "POST", {
     sw: bounds.getSouthWest(),
     ne: bounds.getNorthEast(),
-  });
+  }, controller.signal);
   const { data } = await visibleAreas.json();
   if (map.getSource("parks") !== undefined) {
     const source = map.getSource("parks");

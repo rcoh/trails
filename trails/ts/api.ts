@@ -52,7 +52,7 @@ export const downloadNetwork = async (
 ): Promise<NetworkResp> => {
   return await (await api(`/api/network/${networkId}/`, "GET")).json();
 };
-export const api = async (url: string, method: "GET" | "POST", data?: any) => {
+export const api = async (url: string, method: "GET" | "POST", data?: any, signal?: any) => {
   let body = undefined;
   if (data != null) {
     body = JSON.stringify(data);
@@ -64,6 +64,7 @@ export const api = async (url: string, method: "GET" | "POST", data?: any) => {
       "X-CSRFToken": getCookie("csrftoken"),
     },
     body,
+    signal
   };
   return fetch(url, args);
 };
