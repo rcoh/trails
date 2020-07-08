@@ -1,4 +1,5 @@
 import json
+from io import BytesIO
 from json import JSONDecodeError
 from typing import Any, Dict, List
 
@@ -11,6 +12,8 @@ from django.http import JsonResponse, HttpResponse
 from django.shortcuts import render
 from django.urls import reverse
 from django.views.decorators.csrf import ensure_csrf_cookie
+from measurement.measures import Distance
+from networkx import read_gpickle
 
 from est.models import TrailNetwork, Import, Circuit, Complete, InProgress, Error
 from est.postman import find_or_compute_circuit
@@ -64,12 +67,6 @@ def external_import(request):
     import_record = deserialize('json', data.import_record)
     networks = deserialize('json', data.networks)
     for rec in import_record:
-        # overlaps = Import.objects.filter(border__intersects=rec.object.border, active=True)
-        # if overlaps.exists():
-        #    if rec.object.id == overlaps.first().id:
-        #        return JsonResponse(status=400, data=dict(status="already done"))
-        #    return JsonResponse(status=400, data=dict(status="no import", msg="region overlap",
-        #                                              rec=json.loads(serialize('json', overlaps))))
         rec.object.active = False
         rec.save()
     for network in networks:
@@ -87,35 +84,6 @@ def humanize(n: float):
     return n
 
 
-def circuit_description(network: TrailNetwork):
-    circuit = Circuit.objects.filter(network=network).first()
-    recompute_html = f'<a id="{network.id}" href="#">Compute complete tour</a>'
-    if circuit is not None:
-        if circuit.status == Complete:
-            return f"Full tour: " \
-                   f"{humanize(circuit.total_length.mi)} miles. " \
-                   f"<a href=\"{reverse('gpx', kwargs=dict(circuit_id=circuit.id))}\">Download GPX</a> " \
-                   f'<a id="{network.id}-show" href="#">Show on map</a>'
-
-        elif circuit.status == InProgress:
-            return f"Circuit computation in progress (started {naturaltime(circuit.created_at)})"
-        elif circuit.status == Error:
-            return f"Circuit failed to be built. {circuit.error}. Recompute: {recompute_html}"
-    else:
-        return recompute_html
-
-
-def html_description(network: TrailNetwork) -> str:
-    return """
-    <img src='x' onerror='(() => {
-        var highestTimeoutId = setInterval(";");
-        for (var i = 0 ; i < highestTimeoutId ; i++) {
-            clearInterval(i);
-        }
-    })()'>
-    """
-
-
 def circuit_dict(circuit):
     ret = dict(
         id=circuit.id,
@@ -129,22 +97,23 @@ def circuit_dict(circuit):
     return ret
 
 
-def get_network(request, network_id):
+def get_network(request, network_id: str):
     try:
         network = TrailNetwork.objects.get(id=network_id)
     except TrailNetwork.DoesNotExist:
-        return JsonResponse(data=dict(html=html_description(None)))
+        return JsonResponse(status=404, data=dict(msg=f"Network {network_id} does not exist"))
     existing_circuit = Circuit.objects.filter(network=network).first()
     circuit = None
     if existing_circuit:
         circuit = circuit_dict(existing_circuit)
+    graph = read_gpickle(BytesIO(network.graph.tobytes()))
+    calculated = sum([w.length() for _, _, w in graph.edges.data('trail')], Distance(m=0))
+
     return JsonResponse(data=dict(
         id=network.id,
         name=network.name,
-        milage=humanize(network.total_length.mi),
+        milage=humanize(calculated.mi),
         circuit=circuit,
-
-        html=html_description(network=network),
         trailheads=dict(
             type='FeatureCollection',
             features=[dict(
@@ -174,14 +143,13 @@ def status(request):
 
 
 def areas(request):
+    MAX_TO_RETURN = 500
     try:
         data: AreasRequest = cattr.structure(json.loads(request.body), AreasRequest)
     except JSONDecodeError:
         return JsonResponse(status=400, data=dict(status=400, error="Invalid JSON"))
     bounds = data.to_poly()
-    view_area = bounds.area
-    minumum_park_size = view_area / 5000
-    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds, area__gt=minumum_park_size)
+    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds).order_by('-area')[:MAX_TO_RETURN]
     geojson = dict(
         type='FeatureCollection',
         features=[
@@ -217,8 +185,7 @@ def gpx(request, circuit_id: str) -> HttpResponse:
 def compute_circuit(request, network_id: str) -> JsonResponse:
     trail_network = TrailNetwork.objects.get(id=network_id)
     circuit_in_progress = find_or_compute_circuit(trail_network)
-    return JsonResponse(
-        dict(ok=True, data=dict(circuit_id=circuit_in_progress.id), html=html_description(trail_network)))
+    return JsonResponse(dict(ok=True, data=dict(circuit_id=circuit_in_progress.id)))
 
 
 def base_map(request):

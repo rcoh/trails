@@ -133,7 +133,6 @@ class Trail:
     def points(self):
         return [n.to_point() for n in self.nodes]
 
-    @memoize
     def length(self):
         dists = [
             geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon)).m
@@ -141,7 +140,6 @@ class Trail:
         ]
         return Distance(m=sum(dists))
 
-    @memoize
     def length_m(self):
         dists = [
             geopy.distance.great_circle((a.lat, a.lon), (b.lat, b.lon)).m
@@ -191,11 +189,9 @@ class Trail:
         verify_identical_nodes([self], result)
         return result
 
-    @memoize
     def elevation(self):
         return ElevationChange.from_nodes(self.nodes)
 
-    @memoize
     def reverse(self):
         return Trail(
             nodes=list(reversed(self.nodes)),
@@ -254,14 +250,12 @@ class TrailNetwork:
                 trailheads_to_keep.append(trailhead)
         return trailheads_to_keep
 
-    @memoize
     def total_length_km(self):
         total_length = 0
         for edge in self.graph.edges:
             total_length += sum(v['weight'] for _, v in self.graph[edge[0]][edge[1]].items())
         return total_length
 
-    @memoize
     def total_length(self) -> Distance:
         return Distance(km=self.total_length_km())
 
@@ -286,7 +280,7 @@ class TrailNetwork:
         return f"[name={self.name}][trailheads={len(self.trailheads)}][total_length={self.total_length().km}][uid={self.unique_id()[:100]}]"
 
 
-def segments_for_graph(graph):
+def segments_for_graph(graph) -> Iterator[Trail]:
     yielded_trails = set()
     for edge in graph.edges:
         for i, e in graph[edge[0]][edge[1]].items():

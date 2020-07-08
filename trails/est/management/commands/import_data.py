@@ -1,8 +1,6 @@
-import hashlib
 import os
 import pickle
 import subprocess
-from multiprocessing import Pool
 
 import djclick as click
 from django.contrib.gis.geos import MultiLineString, LineString, MultiPolygon, Polygon, MultiPoint
@@ -10,7 +8,6 @@ from measurement.measures import Distance
 from tqdm import tqdm
 
 import est.models as e
-from osm import util
 from osm.loader import IngestSettings, DefaultQualitySettings, OSMIngestor
 
 BASE_URL = 'https://download.geofabrik.de/north-america/us/{}-latest.osm.pbf'
@@ -42,9 +39,10 @@ def import_states_file(states_file):
 @click.option('--states', type=click.Path(exists=True))
 @click.option('--parallelism', '-p', type=click.INT, default=1)
 @click.option('--resume/--no-result', default=False)
-def import_data(file, resume, states, parallelism):
+@click.option('--rerun/--no-rerun', default=False)
+def import_data(file, resume, states, parallelism, rerun: bool):
     if file:
-        import_from_file(file, resume)
+        import_from_file(file, resume, rerun)
     if states:
         import_states_file(states)
 
@@ -53,7 +51,7 @@ def sha256_digest(f):
     return subprocess.run(["sha256sum", f], capture_output=True).stdout.split()[0].strip()
 
 
-def import_from_file(osm_data, resume: bool):
+def import_from_file(osm_data, resume: bool, rerun: bool):
     Settings = IngestSettings(
         max_distance=Distance(km=50),
         max_segments=300,
@@ -67,7 +65,10 @@ def import_from_file(osm_data, resume: bool):
     if not resume or previous_import is None:
         if e.Import.objects.filter(sha256_sum=digest, complete=True):
             print('Import already done!')
-            return
+            if rerun:
+                e.Import.objects.filter(sha256_sum=digest, complete=True).delete()
+            else:
+                return
         #e.Import.objects.all().update(active=False)
         import_obj = e.Import(active=True, complete=False, border=Polygon(), name=str(osm_data), sha256_sum=digest)
         import_obj.save()

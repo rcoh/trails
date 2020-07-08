@@ -75,12 +75,13 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   const [closed, setClosed] = useState(false);
   const [network, setData] = useState<NetworkResp | undefined>(undefined);
   const previousMapboxId = usePrevious(mapboxId);
-  const previousNetwork = usePrevious(network);
   useEffect(() => {
     const internal = async () => {
       const network = await downloadNetwork(networkId);
-      if (network.circuit && network.circuit.status != "in_progress") {
-        setPolling(false);
+      if (network.circuit) {
+          setPolling(network.circuit.status == "in_progress");
+      } else {
+          setPolling(false);
       }
       setData(network);
     };
@@ -159,8 +160,7 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   }, [trailHeadsVisible, network]);
 
   async function computeCircuit() {
-    const data = await computeGpx(networkId);
-    setData(data);
+    await computeGpx(networkId);
     setPolling(true);
   }
   if (closed) {

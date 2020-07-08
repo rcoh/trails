@@ -109,8 +109,8 @@ class OsmiumTrailLoader(o.SimpleHandler):
 
     def area(self, area):
         if area.tags.get('leisure') in PARKS or area.tags.get("boundary") in PARKISH_BOUNDARIES:
-            #print('name :', area.tags.get('name'))
-            #print(area.num_rings())
+            # print('name :', area.tags.get('name'))
+            # print(area.num_rings())
             border = MultiPolygon([Polygon([Point(n.lon, n.lat) for n in ring]) for ring in area.outer_rings()])
             if border is not None:
                 tag_map = tags_to_dict(area.tags)
@@ -322,14 +322,8 @@ class OSMIngestor:
         print('\n  '.join([str(s) for s in special]))
         assert len(set(special)) == len(special)
 
-        segments = [(s,) for s in segmented_trails]
-        lengths = util.pmap(
-            segments, trail_length_km, self.pool, chunksize=512
-        )
-        lengths = list(lengths)
-        assert len(lengths) == len(segmented_trails)
         ids = set()
-        for trail, length in zip(segmented_trails, lengths):
+        for trail in segmented_trails:
             if no_road_crossings and all(
                     node.osm_id in self.non_trail_nodes for node in (trail.nodes[0], trail.nodes[-1])):
                 continue
@@ -341,7 +335,7 @@ class OSMIngestor:
             G.add_edge(
                 trail.nodes[0],
                 trail.nodes[-1],
-                weight=length,
+                weight=trail.length_m() / 1000,
                 name=trail.name,
                 trail=trail,
             )
@@ -359,8 +353,8 @@ class OSMIngestor:
             if len(c) < 3:
                 continue
             subgraph = G.subgraph(c)
-            # ignore parks less than 2.4km long
-            if subgraph.size(weight='weight') < 2.4:
+            # ignore parks less than 1km long
+            if subgraph.size(weight='weight') < 1:
                 continue
             subgraph = subgraph.copy()
             network_border = MultiPoint([Point(x=n.lon, y=n.lat) for n in c]).convex_hull

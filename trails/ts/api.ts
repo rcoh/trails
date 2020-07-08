@@ -28,14 +28,18 @@ export interface NetworkResp {
   html: string;
   name: string;
   milage: string;
-  circuit?: Circuit;
+  circuit: Circuit | null;
   trailheads: FeatureCollection;
 }
 interface CircuitResponse {
   json: string;
 }
 
-export const computeGpx = async (networkId: string): Promise<NetworkResp> => {
+interface ComputeGpxResponse {
+    circuit_id: string;
+}
+
+export const computeGpx = async (networkId: string): Promise<ComputeGpxResponse> => {
   return await (await api(`/api/circuit/${networkId}/`, "POST")).json();
 };
 export const downloadPath = async (
