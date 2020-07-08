@@ -68,6 +68,26 @@ function usePrevious(value: any) {
   return ref.current;
 }
 
+function useInterval(callback: () => void, delay: number) {
+  const savedCallback = useRef<() => void>();
+
+  // Remember the latest callback.
+  useEffect(() => {
+    savedCallback.current = callback;
+  }, [callback]);
+
+  // Set up the interval.
+  useEffect(() => {
+    function tick() {
+      savedCallback.current();
+    }
+    if (delay !== null) {
+      let id = setInterval(tick, delay);
+      return () => clearInterval(id);
+    }
+  }, [delay]);
+}
+
 export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   const [trailHeadsVisible, setTrailheadsVisible] = useState(false);
   const [polling, setPolling] = useState(false);
@@ -77,11 +97,10 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   const previousMapboxId = usePrevious(mapboxId);
   useEffect(() => {
     const internal = async () => {
+      setPolling(false);
       const network = await downloadNetwork(networkId);
       if (network.circuit) {
-          setPolling(network.circuit.status == "in_progress");
-      } else {
-          setPolling(false);
+        setPolling(network.circuit.status == "in_progress");
       }
       setData(network);
     };
@@ -101,23 +120,12 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
     setTrailheadsVisible(false);
   }, [networkId]);
 
-  useEffect(() => {
-    let timer: number = null;
-    const callback = () => {
-      if (polling) {
-        setPoll((poll) => poll + 1);
-        timer = setTimeout(() => {
-          callback();
-        }, 1000);
-      }
-    };
-    timer = setTimeout(() => {
-      callback();
-    }, 100);
-    return () => {
-      clearTimeout(timer);
-    };
-  }, [polling]);
+  useInterval(
+    () => {
+      setPoll((poll) => poll + 1);
+    },
+    polling ? Math.min(10000, poll * 500): null
+  );
 
   function zoom() {
     map.fitBounds(bb);

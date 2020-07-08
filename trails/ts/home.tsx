@@ -132,6 +132,9 @@ const setupMap = async (center: any, perimeter: any) => {
     style: "mapbox://styles/mapbox/outdoors-v11",
     center: center,
     zoom: 11,
+    pitchWithRotate: false,
+    dragRotate: false,
+    touchZoomRotate: false
   });
   map.addControl(
     new MapboxGeocoder({

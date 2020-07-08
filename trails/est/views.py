@@ -97,6 +97,9 @@ def circuit_dict(circuit):
     return ret
 
 
+LENGTH_CACHE = {}
+
+
 def get_network(request, network_id: str):
     try:
         network = TrailNetwork.objects.get(id=network_id)
@@ -106,8 +109,13 @@ def get_network(request, network_id: str):
     circuit = None
     if existing_circuit:
         circuit = circuit_dict(existing_circuit)
-    graph = read_gpickle(BytesIO(network.graph.tobytes()))
-    calculated = sum([w.length() for _, _, w in graph.edges.data('trail')], Distance(m=0))
+    if network_id in LENGTH_CACHE:
+        print('cache hit')
+        calculated = LENGTH_CACHE[network_id]
+    else:
+        graph = read_gpickle(BytesIO(network.graph.tobytes()))
+        calculated = sum([w.length() for _, _, w in graph.edges.data('trail')], Distance(m=0))
+        LENGTH_CACHE[network_id] = calculated
 
     return JsonResponse(data=dict(
         id=network.id,
