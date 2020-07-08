@@ -149,7 +149,8 @@ def areas(request):
     except JSONDecodeError:
         return JsonResponse(status=400, data=dict(status=400, error="Invalid JSON"))
     bounds = data.to_poly()
-    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds).order_by('-area')[:MAX_TO_RETURN]
+    networks = TrailNetwork.active().filter(poly__bboverlaps=bounds).order_by('-area')[:MAX_TO_RETURN].only('id',
+                                                                                                            'poly')
     geojson = dict(
         type='FeatureCollection',
         features=[
@@ -159,7 +160,6 @@ def areas(request):
                 properties=dict(
                     id=network.id,
                     fill_color='#' + COLORS[network.id.int % len(COLORS)],
-                    center=[network.poly.centroid.x, network.poly.centroid.y],
                     bb=[network.poly.extent[0:2], network.poly.extent[2:4]],
                 ), geometry=json.loads(network.poly.json)
             )
