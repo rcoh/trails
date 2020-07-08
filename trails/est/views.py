@@ -139,6 +139,7 @@ def get_network(request, network_id):
     if existing_circuit:
         circuit = circuit_dict(existing_circuit)
     return JsonResponse(data=dict(
+        id=network.id,
         name=network.name,
         milage=humanize(network.total_length.mi),
         circuit=circuit,

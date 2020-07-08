@@ -109,6 +109,8 @@ class OsmiumTrailLoader(o.SimpleHandler):
 
     def area(self, area):
         if area.tags.get('leisure') in PARKS or area.tags.get("boundary") in PARKISH_BOUNDARIES:
+            #print('name :', area.tags.get('name'))
+            #print(area.num_rings())
             border = MultiPolygon([Polygon([Point(n.lon, n.lat) for n in ring]) for ring in area.outer_rings()])
             if border is not None:
                 tag_map = tags_to_dict(area.tags)
@@ -242,7 +244,11 @@ DefaultIngestSettings = IngestSettings(
 
 
 def trail_length_km(trail):
-    return trail.length_m() / 1000
+    try:
+        return trail.length_m() / 1000
+    except:
+        print('error?')
+        return 1
 
 
 class OSMIngestor:
@@ -265,7 +271,7 @@ class OSMIngestor:
             extra_links = []
         osm_loader = OsmiumTrailLoader(self.ingest_settings.location_filter)
         print(f"Loading trails from {filename}")
-        osm_loader.apply_file(str(filename), locations=True)
+        osm_loader.apply_file(str(filename), locations=True, idx='flex_mem')
         print(f"Loaded from {filename}")
         trails = osm_loader.trails
         for node_ids in extra_links:

@@ -68,7 +68,7 @@ def import_from_file(osm_data, resume: bool):
         if e.Import.objects.filter(sha256_sum=digest, complete=True):
             print('Import already done!')
             return
-        e.Import.objects.all().update(active=False)
+        #e.Import.objects.all().update(active=False)
         import_obj = e.Import(active=True, complete=False, border=Polygon(), name=str(osm_data), sha256_sum=digest)
         import_obj.save()
         digests = set()

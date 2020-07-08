@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-osmium = "==2.15.3"
+osmium = ">=3.0.0"
 tqdm = "==4.25.0"
 geopy = "==1.16.0"
 networkx = "*"

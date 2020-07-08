@@ -69,15 +69,15 @@ function usePrevious(value: any) {
 }
 
 export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
+  const [trailHeadsVisible, setTrailheadsVisible] = useState(false);
   const [polling, setPolling] = useState(false);
   const [poll, setPoll] = useState(0);
   const [closed, setClosed] = useState(false);
   const [network, setData] = useState<NetworkResp | undefined>(undefined);
   const previousMapboxId = usePrevious(mapboxId);
+  const previousNetwork = usePrevious(network);
   useEffect(() => {
-    console.log("downlaod effect");
     const internal = async () => {
-      console.log("downloading network", poll);
       const network = await downloadNetwork(networkId);
       if (network.circuit && network.circuit.status != "in_progress") {
         setPolling(false);
@@ -97,16 +97,15 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
       );
     }
     setClosed(false);
+    setTrailheadsVisible(false);
   }, [networkId]);
 
   useEffect(() => {
-    console.log("starting effect...", polling);
     let timer: number = null;
     const callback = () => {
       if (polling) {
         setPoll((poll) => poll + 1);
         timer = setTimeout(() => {
-          console.log("backoff to 1 second");
           callback();
         }, 1000);
       }
@@ -115,7 +114,6 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
       callback();
     }, 100);
     return () => {
-      console.log("cleared timer");
       clearTimeout(timer);
     };
   }, [polling]);
@@ -123,6 +121,42 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   function zoom() {
     map.fitBounds(bb);
   }
+
+  function toggleTrailHeads() {
+    setTrailheadsVisible((visible) => !visible);
+  }
+
+  useEffect(() => {
+    if (network == null) {
+      return;
+    }
+    const sourceId = `trailheads`;
+    if (map.getSource(sourceId) == null) {
+      map.addSource(sourceId, {
+        type: "geojson",
+        data: network.trailheads,
+      });
+      map.addLayer({
+        id: sourceId,
+        type: "symbol",
+        source: sourceId,
+        layout: {
+          "icon-image": "car-11",
+          "icon-allow-overlap": true,
+        },
+      });
+    } else {
+      const source = map.getSource(sourceId);
+      if (source.type == "geojson") {
+        source.setData(network.trailheads);
+      }
+    }
+    if (trailHeadsVisible) {
+      map.setLayoutProperty(sourceId, "visibility", "visible");
+    } else {
+      map.setLayoutProperty(sourceId, "visibility", "none");
+    }
+  }, [trailHeadsVisible, network]);
 
   async function computeCircuit() {
     const data = await computeGpx(networkId);
@@ -151,6 +185,14 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
         <div>
           <div className="info-row">
             <span>{network.milage} miles of trails</span>
+            <button
+              onClick={toggleTrailHeads}
+              type="button"
+              className="btn btn-primary btn-sm"
+            >
+              {trailHeadsVisible ? "Hide" : "Show"}{" "}
+              {network.trailheads.features.length} trailheads
+            </button>
             <button
               onClick={zoom}
               type="button"
