@@ -139,7 +139,6 @@ const setupMap = async (center: any, perimeter: any) => {
     zoom: 11,
     pitchWithRotate: false,
     dragRotate: false,
-    touchZoomRotate: false
   });
   map.addControl(
     new MapboxGeocoder({
