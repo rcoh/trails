@@ -98,6 +98,9 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   useEffect(() => {
     const internal = async () => {
       setPolling(false);
+      /*if (poll == -1) {
+        return;
+      }*/
       const network = await downloadNetwork(networkId);
       if (network.circuit) {
         setPolling(network.circuit.status == "in_progress");
@@ -110,6 +113,7 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   // If the networkId changes, stop polling
   useEffect(() => {
     setPolling(false);
+    setPoll(-1);
     if (previousMapboxId != null) {
       map.setFeatureState(
         { source: "parks", id: previousMapboxId },

@@ -10,7 +10,7 @@ import est.models as e
 @click.command()
 @click.argument('target', type=click.STRING, default="https://everysingletrail.com")
 def export(target):
-    imports = e.Import.objects.filter(complete=True, active=True).order_by('updated_at')
+    imports = e.Import.objects.filter(complete=True, active=True).order_by('-updated_at')
     for most_recent_import in tqdm(imports):
         #if not click.confirm(
         #        f'Importing {most_recent_import.networks.count()} networks ({most_recent_import.name}) imported {most_recent_import.created_at}'):
