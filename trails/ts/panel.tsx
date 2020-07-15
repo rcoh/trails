@@ -88,32 +88,32 @@ function useInterval(callback: () => void, delay: number) {
   }, [delay]);
 }
 
+interface PollConfig {
+  polls: number;
+}
+
 export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
   const [trailHeadsVisible, setTrailheadsVisible] = useState(false);
-  const [polling, setPolling] = useState(false);
-  const [poll, setPoll] = useState(0);
+  const [polling, setPolling] = useState<PollConfig | undefined>(undefined);
   const [closed, setClosed] = useState(false);
   const [network, setData] = useState<NetworkResp | undefined>(undefined);
   const previousMapboxId = usePrevious(mapboxId);
   useEffect(() => {
     const internal = async () => {
-      setPolling(false);
-      /*if (poll == -1) {
-        return;
-      }*/
       const network = await downloadNetwork(networkId);
-      if (network.circuit) {
-        setPolling(network.circuit.status == "in_progress");
+      if (network.circuit == null || network.circuit.status != "in_progress") {
+        setPolling(undefined);
+      } else if (polling == undefined) {
+        setPolling({polls: 1});
       }
       setData(network);
     };
     internal();
-  }, [networkId, poll]);
+  }, [networkId, polling]);
 
   // If the networkId changes, stop polling
   useEffect(() => {
-    setPolling(false);
-    setPoll(-1);
+    setPolling(undefined);
     if (previousMapboxId != null) {
       map.setFeatureState(
         { source: "parks", id: previousMapboxId },
@@ -126,9 +126,15 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
 
   useInterval(
     () => {
-      setPoll((poll) => poll + 1);
+      setPolling((polling) => {
+        if (polling != undefined) {
+          return { polls : polling.polls + 1}
+        } else {
+          return undefined;
+        }
+      });
     },
-    polling ? Math.min(10000, poll * 500): null
+    polling != null ? Math.min(10000, polling.polls * 500) : null
   );
 
   function zoom() {
@@ -173,7 +179,7 @@ export const InfoPanel = ({ networkId, bb, map, mapboxId }: InfoPanelProps) => {
 
   async function computeCircuit() {
     await computeGpx(networkId);
-    setPolling(true);
+    setPolling({polls: 1});
   }
   if (closed) {
     return <span></span>;
